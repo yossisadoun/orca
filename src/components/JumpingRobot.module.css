@@ -1,0 +1,19 @@
+.wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 8px;
+  padding: 4px 0 2px;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.frame {
+  display: block;
+  width: 72px;
+  height: auto;
+  max-height: 88px;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+}

@@ -1,0 +1,58 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+:root {
+  --bg-app: #fcfcfc;
+  --bg-panel: #f7f7f8;
+  --bg-subtle: #f1f1f3;
+  --bg-hover: #ececed;
+  --surface-card: #ffffff;
+  --border-subtle: #e8e8ea;
+  --border-strong: #d8d8dc;
+  --border-dashed: #dddde0;
+  --text-primary: #1a1a1c;
+  --text-secondary: #5c5c61;
+  --text-muted: #8e8e93;
+  --text-faint: #a7a7ad;
+  /* Board: horizontal padding (40px) + 5×260px columns + 4×16px gaps */
+  --workspace-min-inline: 1404px;
+}
+
+body {
+  margin: 0;
+  font-family:
+    "Inter",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-primary);
+  background: var(--bg-app);
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
