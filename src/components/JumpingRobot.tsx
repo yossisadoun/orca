@@ -3,16 +3,18 @@ import styles from "./JumpingRobot.module.css";
 
 const FRAME_MS = 100;
 
+const base = import.meta.env.BASE_URL;
+
 const FRAMES = [
-  "/robot-jump/jump_1.png",
-  "/robot-jump/jump_2.png",
-  "/robot-jump/jump_3.png",
-  "/robot-jump/jump_4.png",
-  "/robot-jump/jump_5.png",
-  "/robot-jump/jump_6.png",
+  `${base}robot-jump/jump_1.png`,
+  `${base}robot-jump/jump_2.png`,
+  `${base}robot-jump/jump_3.png`,
+  `${base}robot-jump/jump_4.png`,
+  `${base}robot-jump/jump_5.png`,
+  `${base}robot-jump/jump_6.png`,
 ] as const;
 
-/** Looping frame animation — artwork uses a dark matte; keep on dark chip for correct colors. */
+/** Looping sprite frames; URLs use BASE_URL so GitHub Pages (/repo/) resolves assets. */
 export function JumpingRobot({ className }: { className?: string }) {
   const [frame, setFrame] = useState(0);
 

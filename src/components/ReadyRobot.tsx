@@ -4,7 +4,9 @@ import styles from "./ReadyRobot.module.css";
 /** Slower than jump — subtle “ready” bob between two transparent frames. */
 const FRAME_MS = 380;
 
-const FRAMES = ["/robot-ready/ready_1.png", "/robot-ready/ready_2.png"] as const;
+const base = import.meta.env.BASE_URL;
+
+const FRAMES = [`${base}robot-ready/ready_1.png`, `${base}robot-ready/ready_2.png`] as const;
 
 export function ReadyRobot({ className }: { className?: string }) {
   const [frame, setFrame] = useState(0);
