@@ -14,6 +14,20 @@ const FRAMES = [
   `${base}robot-jump/jump_6.png`,
 ] as const;
 
+function preloadUrls(urls: readonly string[]): Promise<void> {
+  return Promise.all(
+    urls.map(
+      (src) =>
+        new Promise<void>((resolve) => {
+          const img = new Image();
+          img.onload = () => resolve();
+          img.onerror = () => resolve();
+          img.src = src;
+        }),
+    ),
+  ).then(() => undefined);
+}
+
 /** Looping sprite frames; URLs use BASE_URL so GitHub Pages (/repo/) resolves assets. */
 export function JumpingRobot({ className }: { className?: string }) {
   const [frame, setFrame] = useState(0);
@@ -24,19 +38,31 @@ export function JumpingRobot({ className }: { className?: string }) {
       typeof window.matchMedia === "function" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduce) return;
-    const id = window.setInterval(() => {
-      setFrame((f) => (f + 1) % FRAMES.length);
-    }, FRAME_MS);
-    return () => clearInterval(id);
+
+    let id: ReturnType<typeof setInterval> | undefined;
+    let cancelled = false;
+
+    preloadUrls(FRAMES).then(() => {
+      if (cancelled) return;
+      id = window.setInterval(() => {
+        setFrame((f) => (f + 1) % FRAMES.length);
+      }, FRAME_MS);
+    });
+
+    return () => {
+      cancelled = true;
+      if (id !== undefined) clearInterval(id);
+    };
   }, []);
 
   return (
     <div className={`${styles.wrap} ${className ?? ""}`} aria-hidden>
       <img
+        key={FRAMES[frame]}
         className={styles.frame}
         src={FRAMES[frame]}
         alt=""
-        decoding="async"
+        decoding="sync"
         draggable={false}
       />
     </div>

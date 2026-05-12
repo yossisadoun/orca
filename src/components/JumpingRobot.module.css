@@ -12,7 +12,7 @@
   display: block;
   width: 72px;
   height: auto;
-  max-height: 88px;
+  max-height: 100px;
   object-fit: contain;
   user-select: none;
   -webkit-user-drag: none;
