@@ -45,6 +45,7 @@ export type OrcaPlanHostAPI = {
   saveWorkspaceToDisk?: (projects: PlanWorkspaceEntry[], lastActiveProjectId: string | null) => Promise<unknown>;
   detectClaudeSession?: (workspaceRoot: string) => Promise<unknown>;
   writeTaskContext?: (workspaceRoot: string, itemId: string, content: string) => Promise<unknown>;
+  detectGitHub?: (workspaceRoot: string) => Promise<unknown>;
   ensurePlanSchema?: (workspaceRoot: string) => Promise<unknown>;
   listDocs?: (workspaceRoot: string) => Promise<unknown>;
   readDoc?: (workspaceRoot: string, filename: string) => Promise<unknown>;

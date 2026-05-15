@@ -327,6 +327,7 @@ function registerIpcHandlers() {
     'orca-plan:save-workspace-to-disk',
     'orca-plan:detect-claude-session',
     'orca-plan:write-task-context',
+    'orca-plan:detect-github',
     'orca-plan:ensure-plan-schema',
     'orca-plan:read-doc',
     'orca-plan:write-doc',
@@ -432,6 +433,47 @@ The parallel plan (tracks and items) lives in the Orca Plan app and in \`.orca-p
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       return { ok: false, error: message, created: false };
+    }
+  });
+
+  ipcMain.handle('orca-plan:detect-github', async (_event, args) => {
+    try {
+      const workspaceRoot = expandWorkspacePath(typeof args?.workspaceRoot === 'string' ? args.workspaceRoot : '');
+      if (!workspaceRoot) return { ok: false, error: 'Invalid args' };
+      const root = path.resolve(workspaceRoot);
+
+      // Get remote URL
+      let remoteUrl;
+      try {
+        const { stdout } = await execFileAsync('git', ['remote', 'get-url', 'origin'], { cwd: root, windowsHide: true });
+        remoteUrl = String(stdout).trim();
+      } catch {
+        return { ok: false, error: 'No git remote' };
+      }
+
+      // Parse GitHub URL (HTTPS or SSH)
+      let owner, repo;
+      const httpsMatch = remoteUrl.match(/github\.com\/([^/]+)\/([^/.]+)/);
+      const sshMatch = remoteUrl.match(/github\.com:([^/]+)\/([^/.]+)/);
+      const m = httpsMatch || sshMatch;
+      if (!m) return { ok: false, error: 'Not a GitHub remote' };
+      owner = m[1];
+      repo = m[2];
+
+      // Get default branch
+      let defaultBranch = 'main';
+      try {
+        const { stdout } = await execFileAsync('git', ['symbolic-ref', 'refs/remotes/origin/HEAD', '--short'], { cwd: root, windowsHide: true });
+        const ref = String(stdout).trim(); // e.g. "origin/main"
+        defaultBranch = ref.replace(/^origin\//, '') || 'main';
+      } catch {
+        // fallback to main
+      }
+
+      return { ok: true, owner, repo, defaultBranch };
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      return { ok: false, error: message };
     }
   });
 

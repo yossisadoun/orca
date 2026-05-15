@@ -19,11 +19,13 @@ export function PlanProjectScreen({
   onBack,
   onUpdateSnapshot,
   onRenameProject,
+  onUpdateGitHub,
 }: {
   project: PlanWorkspaceEntry;
   onBack: () => void;
   onUpdateSnapshot: (snapshot: PlanProjectSnapshot) => void;
   onRenameProject: (title: string) => void;
+  onUpdateGitHub?: (github: { owner: string; repo: string; defaultBranch: string }) => void;
 }) {
   const { snapshot } = project;
   const { planTracks, planTrackItems, planItemGroups } = snapshot;
@@ -55,6 +57,19 @@ export function PlanProjectScreen({
     const fn = window.orcaPlan?.ensurePlanSchema;
     if (fn) void fn(workspaceRootEffective);
   }, [workspaceRootEffective]);
+
+  // Auto-detect GitHub repo
+  useEffect(() => {
+    if (!workspaceRootEffective || project.github) return;
+    const fn = window.orcaPlan?.detectGitHub;
+    if (!fn) return;
+    void fn(workspaceRootEffective).then((raw: unknown) => {
+      if (!raw || typeof raw !== "object" || !("ok" in raw)) return;
+      const r = raw as { ok: boolean; owner?: string; repo?: string; defaultBranch?: string };
+      if (!r.ok || !r.owner || !r.repo) return;
+      onUpdateGitHub?.({ owner: r.owner, repo: r.repo, defaultBranch: r.defaultBranch || "main" });
+    });
+  }, [workspaceRootEffective, project.github, onUpdateGitHub]);
 
   // On project open, merge agent-written fields from disk plan.json into memory
   useEffect(() => {
@@ -272,6 +287,7 @@ export function PlanProjectScreen({
     document.addEventListener("pointerup", onUp);
   }, [agentWidth]);
 
+  const [githubUrlInput, setGithubUrlInput] = useState<string | null>(null);
   const displayTitle = project.title.trim() || "Untitled project";
 
   const startTitleEdit = () => {
@@ -364,6 +380,44 @@ export function PlanProjectScreen({
             </button>
           )}
         </div>
+        {project.github ? (
+          <span
+            className={styles.githubBadge}
+            title={`${project.github.owner}/${project.github.repo} (${project.github.defaultBranch})`}
+          >
+            {project.github.owner}/{project.github.repo}
+          </span>
+        ) : workspaceRootEffective ? (
+          githubUrlInput !== null ? (
+            <input
+              className={styles.githubInput}
+              value={githubUrlInput}
+              onChange={(e) => setGithubUrlInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  const m = githubUrlInput.match(/github\.com[/:]([^/]+)\/([^/.]+)/);
+                  if (m) {
+                    onUpdateGitHub?.({ owner: m[1], repo: m[2], defaultBranch: "main" });
+                  }
+                  setGithubUrlInput(null);
+                }
+                if (e.key === "Escape") setGithubUrlInput(null);
+              }}
+              onBlur={() => setGithubUrlInput(null)}
+              placeholder="https://github.com/owner/repo"
+              autoFocus
+            />
+          ) : (
+            <button
+              type="button"
+              className={styles.githubConnectBtn}
+              onClick={() => setGithubUrlInput("")}
+              title="Connect to GitHub"
+            >
+              + GitHub
+            </button>
+          )
+        ) : null}
       </header>
       <div className={styles.body}>
         {canShowFileTree ? (
@@ -620,6 +674,7 @@ export function PlanProjectScreen({
             workspaceRoot={workspaceRootEffective}
             snapshot={snapshot}
             activeItem={activeItemChat}
+            github={project.github}
             onBackToProject={activeItemChatId ? () => setActiveItemChatId(null) : undefined}
             onMinimize={() => setAgentMinimized(true)}
             onSessionDetected={activeItemChatId ? (sessionId) => {

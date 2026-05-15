@@ -39,6 +39,8 @@ contextBridge.exposeInMainWorld('orcaPlan', {
     ipcRenderer.invoke('orca-plan:detect-claude-session', { workspaceRoot }),
   writeTaskContext: (workspaceRoot, itemId, content) =>
     ipcRenderer.invoke('orca-plan:write-task-context', { workspaceRoot, itemId, content }),
+  detectGitHub: (workspaceRoot) =>
+    ipcRenderer.invoke('orca-plan:detect-github', { workspaceRoot }),
   ensurePlanSchema: (workspaceRoot) =>
     ipcRenderer.invoke('orca-plan:ensure-plan-schema', { workspaceRoot }),
   listDocs: (workspaceRoot) =>

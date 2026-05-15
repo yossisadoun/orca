@@ -159,6 +159,11 @@ export default function App() {
         onRenameProject={(title) => {
           onUpdateProjectTitle(activeProject.id, title);
         }}
+        onUpdateGitHub={(github) => {
+          setProjects((prev) =>
+            prev.map((p) => (p.id === activeProject.id ? { ...p, github } : p)),
+          );
+        }}
       />
     );
   }

@@ -227,6 +227,47 @@
   box-sizing: border-box;
 }
 
+.githubBadge {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.githubBadge:hover {
+  color: var(--text-secondary);
+}
+
+.githubConnectBtn {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  border: 1px dashed var(--border-subtle);
+  border-radius: 5px;
+  background: transparent;
+  padding: 3px 10px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.githubConnectBtn:hover {
+  border-color: var(--text-muted);
+  color: var(--text-secondary);
+}
+
+.githubInput {
+  font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  padding: 3px 8px;
+  border: 1px solid var(--accent-text, #5b21b6);
+  border-radius: 5px;
+  background: var(--bg-app);
+  color: var(--text-primary);
+  width: 260px;
+  outline: none;
+}
+
 .titleInput:focus {
   outline: none;
   border-color: rgb(59 130 246 / 0.55);

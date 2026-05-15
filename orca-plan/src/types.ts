@@ -62,6 +62,12 @@ export interface PlanProjectSnapshot {
   releaseLog?: ReleaseLogEntry[];
 }
 
+export interface GitHubInfo {
+  owner: string;
+  repo: string;
+  defaultBranch: string;
+}
+
 export interface PlanWorkspaceEntry {
   id: string;
   title: string;
@@ -69,5 +75,7 @@ export interface PlanWorkspaceEntry {
   workspaceRoot?: string;
   /** Claude Code session ID for the project-level conversation. */
   claudeSessionId?: string;
+  /** Detected GitHub repo info. */
+  github?: GitHubInfo;
   snapshot: PlanProjectSnapshot;
 }

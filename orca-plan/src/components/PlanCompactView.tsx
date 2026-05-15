@@ -1,4 +1,5 @@
 import { Check, ChevronLeft, ChevronRight, Circle, Clock, Eye, Flame, Loader, MessageCircle, Plus } from "lucide-react";
+import type { RefObject } from "react";
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { PLAN_TRACK_ITEM_MIME } from "../constants/dnd";
 import type { PlanTrack, PlanItemGroup, PlanTrackItem } from "../types";
@@ -114,6 +115,27 @@ export function PlanCompactView({
   // const maxDevOrder = Math.max(0, ...items.map((i) => i.devOrder ?? 0));
   // const hasAnyDevOrder = items.some((i) => i.devOrder != null && i.devOrder > 0);
   const devOrderFilter: number | null = null;
+
+  // Scroll refs and overflow detection per track
+  const scrollRefsMap = useRef<Map<string, HTMLDivElement>>(new Map());
+  const [overflowingTracks, setOverflowingTracks] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const check = () => {
+      const next = new Set<string>();
+      for (const [id, el] of scrollRefsMap.current) {
+        if (el.scrollWidth > el.clientWidth + 2) next.add(id);
+      }
+      setOverflowingTracks((prev) => {
+        if (prev.size === next.size && [...prev].every((id) => next.has(id))) return prev;
+        return next;
+      });
+    };
+    check();
+    const ro = new ResizeObserver(check);
+    for (const el of scrollRefsMap.current.values()) ro.observe(el);
+    return () => ro.disconnect();
+  });
 
   const [trackFormOpen, setTrackFormOpen] = useState(false);
   const [itemFormTrackId, setItemFormTrackId] = useState<string | null>(null);
@@ -580,6 +602,23 @@ export function PlanCompactView({
             }
           }}
         >
+          {overflowingTracks.has(track.id) ? (
+            <button
+              type="button"
+              className={styles.itemsNavBtn}
+              onClick={() => {
+                const el = scrollRefsMap.current.get(track.id);
+                if (el) el.scrollBy({ left: -200, behavior: "smooth" });
+              }}
+              title="Previous items"
+            >
+              <ChevronLeft size={12} strokeWidth={2} />
+            </button>
+          ) : null}
+          <div
+            className={styles.itemsScroll}
+            ref={(el) => { if (el) scrollRefsMap.current.set(track.id, el); }}
+          >
           <div className={styles.itemsWrap}>
             {itemBlocks.map((block, blockIdx) => {
               const isLastBlock = blockIdx === itemBlocks.length - 1;
@@ -759,6 +798,20 @@ export function PlanCompactView({
               </>
             ) : null}
           </div>
+          </div>
+          {overflowingTracks.has(track.id) ? (
+            <button
+              type="button"
+              className={styles.itemsNavBtn}
+              onClick={() => {
+                const el = scrollRefsMap.current.get(track.id);
+                if (el) el.scrollBy({ left: 200, behavior: "smooth" });
+              }}
+              title="Next items"
+            >
+              <ChevronRight size={12} strokeWidth={2} />
+            </button>
+          ) : null}
         </div>
       </li>
     );

@@ -185,6 +185,7 @@ export function ClaudeAgentPanel({
   workspaceRoot,
   snapshot,
   activeItem,
+  github,
   onBackToProject,
   onSessionDetected,
   onMinimize,
@@ -192,6 +193,7 @@ export function ClaudeAgentPanel({
   workspaceRoot: string;
   snapshot: PlanProjectSnapshot;
   activeItem?: PlanTrackItem | null;
+  github?: { owner: string; repo: string; defaultBranch: string };
   onBackToProject?: () => void;
   onMinimize?: () => void;
   /** Called when a Claude session ID is detected for this chat. */
@@ -328,7 +330,8 @@ IMPORTANT:
 - You can edit plan.json to update this item's status, description, or devOrder
 - When you finish work on this item, set its status to "review" (never "done" — only the user marks items done)
 - When reaching a stopping point, update this item's \`lastNote\` and \`lastNoteAt\` in plan.json with a brief summary of where we left off
-- Project docs are at .orca-plan/docs/vision.md and .orca-plan/docs/architecture.md`;
+- Project docs are at .orca-plan/docs/vision.md and .orca-plan/docs/architecture.md${github ? `
+- GitHub repo: ${github.owner}/${github.repo} (default branch: ${github.defaultBranch})` : ""}`;
         } else {
           systemPrompt = `You are the project-level planning agent for this workspace.
 
@@ -349,7 +352,10 @@ You can also read and update:
 - .orca-plan/docs/vision.md — project vision
 - .orca-plan/docs/architecture.md — technical architecture
 
-After editing plan.json, the UI updates automatically. Don't ask if you can edit — just do it when appropriate.`;
+After editing plan.json, the UI updates automatically. Don't ask if you can edit — just do it when appropriate.${github ? `
+
+GitHub repo: ${github.owner}/${github.repo} (default branch: ${github.defaultBranch})
+You can use git to push, create branches, etc. The remote is already configured.` : ""}`;
         }
 
         const r = await ptySpawn({

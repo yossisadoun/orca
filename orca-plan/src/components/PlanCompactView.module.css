@@ -340,7 +340,6 @@
 
 .row {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   min-width: 0;
@@ -503,11 +502,44 @@
 }
 
 .items {
-  display: contents;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.itemsScroll {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .itemsWrap {
-  display: contents;
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  align-items: center;
+  white-space: nowrap;
+  transition: transform 0.2s ease;
+}
+
+.itemsNavBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  opacity: 0.3;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.itemsNavBtn:hover {
+  opacity: 1;
 }
 
 .itemChip {
@@ -523,10 +555,12 @@
   background: var(--bg-subtle);
   border: none;
   box-shadow: inset 0 0 0 1px var(--border-subtle);
-  max-width: min(100%, 320px);
+  max-width: 320px;
   font-family: inherit;
   cursor: pointer;
   text-align: left;
+  flex-shrink: 0;
+  white-space: nowrap;
   transition:
     background 0.12s ease,
     box-shadow 0.12s ease;
@@ -813,7 +847,8 @@
 }
 
 .itemCluster {
-  display: contents;
+  display: inline-flex;
+  flex-shrink: 0;
 }
 
 .itemClusterLabeled {
@@ -854,7 +889,10 @@
 }
 
 .itemClusterChips {
-  display: contents;
+  display: inline-flex;
+  flex-direction: row;
+  gap: 6px;
+  align-items: center;
 }
 
 .itemClusterLabeled .itemClusterChips {
