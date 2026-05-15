@@ -1,7 +1,7 @@
 import { FitAddon } from "@xterm/addon-fit";
 import { Terminal, type ITheme } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
-import { ArrowLeft, Settings } from "lucide-react";
+import { ArrowLeft, Minus, Settings } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PlanProjectSnapshot, PlanTrackItem } from "../types";
 import { detectClaudeSessions, ptyConnect, ptyResize, ptySpawn, ptyWrite, subscribePtyData, subscribePtyExit, writeTaskContext } from "../orcaPlanHost";
@@ -187,11 +187,13 @@ export function ClaudeAgentPanel({
   activeItem,
   onBackToProject,
   onSessionDetected,
+  onMinimize,
 }: {
   workspaceRoot: string;
   snapshot: PlanProjectSnapshot;
   activeItem?: PlanTrackItem | null;
   onBackToProject?: () => void;
+  onMinimize?: () => void;
   /** Called when a Claude session ID is detected for this chat. */
   onSessionDetected?: (sessionId: string) => void;
 }) {
@@ -324,6 +326,7 @@ IMPORTANT:
 - The task context file is also saved at .orca-plan/tasks/${activeItem.id}.md
 - The full project plan is at .orca-plan/plan.json (read .orca-plan/plan-schema.md for the schema)
 - You can edit plan.json to update this item's status, description, or devOrder
+- When you finish work on this item, set its status to "review" (never "done" — only the user marks items done)
 - When reaching a stopping point, update this item's \`lastNote\` and \`lastNoteAt\` in plan.json with a brief summary of where we left off
 - Project docs are at .orca-plan/docs/vision.md and .orca-plan/docs/architecture.md`;
         } else {
@@ -336,6 +339,8 @@ You CAN and SHOULD directly edit .orca-plan/plan.json to:
 - Add, remove, or rename tracks
 - Add, remove, or rename plan items
 - Set devOrder on items (integer >= 1, build priority — 1 = first)
+- Set blockedBy on items (array of item IDs that must complete first) — maximize parallelism by only adding truly required dependencies
+- Set status on items: "backlog", "in_progress", "review" (never set "done" — only the user can mark items done)
 - Reorder items and tracks
 - Add descriptions to items and tracks
 - Group items with itemGroupId
@@ -379,7 +384,7 @@ After editing plan.json, the UI updates automatically. Don't ask if you can edit
             `Read .orca-plan/docs/vision.md and .orca-plan/docs/architecture.md for project context.`,
             `The plan is at .orca-plan/plan.json (schema at .orca-plan/plan-schema.md).`,
             "",
-            `Let's discuss the approach for this item before writing any code.`,
+            `Let's discuss the approach for this item. Once we agree on a plan, create a checklist for it in plan.json.`,
           ].filter(Boolean).join("\n");
 
           // Wait for Claude Code to show its prompt, then send
@@ -444,6 +449,16 @@ After editing plan.json, the UI updates automatically. Don't ask if you can edit
           {activeItem ? activeItem.label : "Master Plan"}
         </h2>
         <div className={styles.headActions} ref={menuRef}>
+          {onMinimize ? (
+            <button
+              type="button"
+              className={styles.settingsBtn}
+              onClick={onMinimize}
+              title="Minimize"
+            >
+              <Minus size={14} strokeWidth={2} />
+            </button>
+          ) : null}
           <button
             type="button"
             className={styles.settingsBtn}

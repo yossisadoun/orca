@@ -24,6 +24,18 @@ const DEFAULT_DOCS: { filename: string; title: string; seed: string }[] = [
 `,
   },
   {
+    filename: "thoughts.md",
+    title: "Thoughts",
+    seed: `# Thoughts
+
+<!-- This is just a scratchpad — a bucket for the user's raw thoughts, ideas, and notes.
+     Do NOT treat this as requirements, decisions, or instructions.
+     It's unstructured, may contradict itself, and may contain half-formed ideas.
+     Read it for background context only. Never act on it without explicit user confirmation.
+-->
+`,
+  },
+  {
     filename: "architecture.md",
     title: "Architecture",
     seed: `# Architecture
@@ -137,35 +149,40 @@ export function ProjectDocs({ workspaceRoot }: { workspaceRoot: string }) {
         })}
       </div>
       {editingFilename ? (
-        <div className={styles.editor}>
-          <div className={styles.editorHeader}>
-            <span className={styles.editorTitle}>
-              {titleFromFilename(editingFilename)}
-            </span>
-            <span className={styles.editorFilename}>.orca-plan/docs/{editingFilename}</span>
-            <button
-              type="button"
-              className={styles.editorCloseBtn}
-              onClick={saveAndClose}
-              title="Save and close"
-            >
-              <X size={14} strokeWidth={2} />
-            </button>
+        <div
+          className={styles.backdrop}
+          onClick={(e) => { if (e.target === e.currentTarget) saveAndClose(); }}
+        >
+          <div className={styles.popup}>
+            <div className={styles.editorHeader}>
+              <span className={styles.editorTitle}>
+                {titleFromFilename(editingFilename)}
+              </span>
+              <span className={styles.editorFilename}>.orca-plan/docs/{editingFilename}</span>
+              <button
+                type="button"
+                className={styles.editorCloseBtn}
+                onClick={saveAndClose}
+                title="Save and close"
+              >
+                <X size={14} strokeWidth={2} />
+              </button>
+            </div>
+            <textarea
+              ref={textareaRef}
+              className={styles.editorTextarea}
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  saveAndClose();
+                }
+              }}
+              placeholder={`Write about the project's ${titleFromFilename(editingFilename).toLowerCase()} here...\n\nThis file lives on disk at .orca-plan/docs/${editingFilename} — Claude can read and update it too.`}
+              spellCheck={false}
+            />
           </div>
-          <textarea
-            ref={textareaRef}
-            className={styles.editorTextarea}
-            value={editContent}
-            onChange={(e) => setEditContent(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Escape") {
-                e.preventDefault();
-                saveAndClose();
-              }
-            }}
-            placeholder={`Write about the project's ${titleFromFilename(editingFilename).toLowerCase()} here...\n\nThis file lives on disk at .orca-plan/docs/${editingFilename} — Claude can read and update it too.`}
-            spellCheck={false}
-          />
         </div>
       ) : null}
     </div>

@@ -1,7 +1,27 @@
-import { ChevronLeft, ChevronRight, Clock, Flame, MessageCircle, Plus } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Circle, Clock, Eye, Flame, Loader, MessageCircle, Plus } from "lucide-react";
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { PLAN_TRACK_ITEM_MIME } from "../constants/dnd";
 import type { PlanTrack, PlanItemGroup, PlanTrackItem } from "../types";
+import { computeWaves, isItemReady, maxWave } from "../utils/parallelWaves";
+
+type ItemStatus = "backlog" | "in_progress" | "review" | "done";
+const STATUS_ORDER: ItemStatus[] = ["backlog", "in_progress", "review", "done"];
+const STATUS_ICONS: Record<ItemStatus, React.ReactNode> = {
+  backlog: <Circle size={12} strokeWidth={2} />,
+  in_progress: <Loader size={12} strokeWidth={2} />,
+  review: <Eye size={12} strokeWidth={2} />,
+  done: <Check size={12} strokeWidth={2.5} />,
+};
+const STATUS_LABELS: Record<ItemStatus, string> = {
+  backlog: "Backlog",
+  in_progress: "In progress",
+  review: "Review",
+  done: "Done",
+};
+function nextStatus(current: ItemStatus): ItemStatus {
+  const idx = STATUS_ORDER.indexOf(current);
+  return STATUS_ORDER[(idx + 1) % STATUS_ORDER.length]!;
+}
 import { buildPlanItemDisplayBlocks } from "../utils/planItemDisplay";
 import styles from "./PlanCompactView.module.css";
 import popoverStyles from "./PlanTracksPanel.module.css";
@@ -23,6 +43,7 @@ export function PlanCompactView({
   onOpenItemChat,
   activeItemChatId,
   onUpdateDevOrder,
+  onUpdateStatus,
   onOpenItemDetail,
   heatMapEnabled,
   onToggleHeatMap,
@@ -51,6 +72,8 @@ export function PlanCompactView({
   activeItemChatId?: string | null;
   /** Set the devOrder on a plan item. */
   onUpdateDevOrder?: (itemId: string, devOrder: number | undefined) => void;
+  /** Set the status on a plan item. */
+  onUpdateStatus?: (itemId: string, status: ItemStatus) => void;
   /** Open the item detail popup. */
   onOpenItemDetail?: (itemId: string) => void;
   /** Whether heat map coloring is enabled. */
@@ -80,13 +103,17 @@ export function PlanCompactView({
     return map;
   }, [heatMapEnabled, items]);
 
+  // Parallel waves
+  const waveMap = useMemo(() => computeWaves(items), [items]);
+  const maxWaveNum = useMemo(() => maxWave(waveMap), [waveMap]);
+  const hasWaves = maxWaveNum > 1;
+  const [waveFilter, setWaveFilter] = useState<number | null>(null);
+
   // Dev order filter
-  const maxDevOrder = Math.max(0, ...items.map((i) => i.devOrder ?? 0));
-  const hasAnyDevOrder = items.some((i) => i.devOrder != null && i.devOrder > 0);
-  const [devOrderFilter, setDevOrderFilter] = useState<number | null>(null); // null = show all
-  const [devOrderEditItemId, setDevOrderEditItemId] = useState<string | null>(null);
-  const [devOrderDraft, setDevOrderDraft] = useState("");
-  const devOrderInputRef = useRef<HTMLInputElement>(null);
+  // Dev order feature flagged off — data preserved, UI hidden
+  // const maxDevOrder = Math.max(0, ...items.map((i) => i.devOrder ?? 0));
+  // const hasAnyDevOrder = items.some((i) => i.devOrder != null && i.devOrder > 0);
+  const devOrderFilter: number | null = null;
 
   const [trackFormOpen, setTrackFormOpen] = useState(false);
   const [itemFormTrackId, setItemFormTrackId] = useState<string | null>(null);
@@ -112,6 +139,8 @@ export function PlanCompactView({
   const [planItemDropBeforeId, setPlanItemDropBeforeId] = useState<string | null>(null);
   const [planItemDropAppendTrackId, setPlanItemDropAppendTrackId] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const [itemContextMenu, setItemContextMenu] = useState<{ x: number; y: number; itemId: string } | null>(null);
+  const itemContextMenuRef = useRef<HTMLDivElement>(null);
   const [groupDialogOpen, setGroupDialogOpen] = useState(false);
   const [groupDialogName, setGroupDialogName] = useState("");
   const spaceKeyDownRef = useRef(false);
@@ -292,6 +321,16 @@ export function PlanCompactView({
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [contextMenu]);
+
+  useEffect(() => {
+    if (!itemContextMenu) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (itemContextMenuRef.current?.contains(e.target as Node)) return;
+      setItemContextMenu(null);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [itemContextMenu]);
 
   useEffect(() => {
     if (
@@ -573,6 +612,11 @@ export function PlanCompactView({
                         heatStyle = { borderLeft: `3px solid ${HEAT_COLORS[rank]}` };
                       }
                     }
+                    // Wave info
+                    const itemWave = waveMap.get(item.id);
+                    const itemReady = isItemReady(item, items);
+                    const isWaveFiltered = waveFilter != null && itemWave != null && itemWave > waveFilter;
+                    const isBlocked = !itemReady && (item.blockedBy?.length ?? 0) > 0;
                     const chipTitle = itemDesc
                       ? `${itemDesc} · Alt+click to edit`
                       : "Alt+click to edit label";
@@ -584,7 +628,7 @@ export function PlanCompactView({
                         ref={(el) => {
                           editItemAnchorRefs.current[item.id] = el;
                         }}
-                        className={`${styles.itemChip} ${editItemId === item.id ? styles.itemChipActive : ""} ${isItemSelected ? styles.itemChipSelected : ""} ${isItemChatActive ? styles.itemChipChatActive : ""} ${isDraggingChip ? styles.itemChipDragging : ""} ${isDropBefore ? styles.itemChipDropTarget : ""} ${isFilteredOut ? styles.itemChipDimmed : ""}`}
+                        className={`${styles.itemChip} ${editItemId === item.id ? styles.itemChipActive : ""} ${isItemSelected ? styles.itemChipSelected : ""} ${isItemChatActive ? styles.itemChipChatActive : ""} ${isDraggingChip ? styles.itemChipDragging : ""} ${isDropBefore ? styles.itemChipDropTarget : ""} ${isFilteredOut || isWaveFiltered ? styles.itemChipDimmed : ""}`}
                         style={heatStyle}
                         aria-label={ariaLabel}
                         title={chipTitle}
@@ -628,6 +672,11 @@ export function PlanCompactView({
                           if (!raw || raw === item.id) return;
                           onMovePlanItem(raw, track.id, item.id);
                         }}
+                        onContextMenu={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setItemContextMenu({ x: e.clientX, y: e.clientY, itemId: item.id });
+                        }}
                         onClick={(e) => {
                           if (e.shiftKey && spaceKeyDownRef.current) {
                             e.preventDefault();
@@ -649,68 +698,26 @@ export function PlanCompactView({
                         }}
                       >
                         <span className={styles.itemChipRow}>
-                          {devOrderEditItemId === item.id ? (
-                            <input
-                              ref={devOrderInputRef}
-                              className={styles.devOrderInput}
-                              value={devOrderDraft}
-                              onChange={(e) => setDevOrderDraft(e.target.value)}
-                              onKeyDown={(e) => {
-                                e.stopPropagation();
-                                if (e.key === "Enter") {
-                                  e.preventDefault();
-                                  const n = devOrderDraft.trim() === "" ? undefined : Number(devOrderDraft.trim());
-                                  if (n !== undefined && (isNaN(n) || n < 0)) { setDevOrderEditItemId(null); return; }
-                                  onUpdateDevOrder?.(item.id, n);
-                                  setDevOrderEditItemId(null);
-                                }
-                                if (e.key === "Escape") {
-                                  setDevOrderEditItemId(null);
-                                }
-                              }}
-                              onBlur={() => {
-                                const n = devOrderDraft.trim() === "" ? undefined : Number(devOrderDraft.trim());
-                                if (n === undefined || (!isNaN(n) && n >= 0)) {
-                                  onUpdateDevOrder?.(item.id, n);
-                                }
-                                setDevOrderEditItemId(null);
-                              }}
-                              onClick={(e) => e.stopPropagation()}
-                              autoFocus
-                              size={2}
-                            />
-                          ) : item.devOrder != null && item.devOrder > 0 ? (
+                          {onUpdateStatus ? (
                             <span
-                              className={styles.devOrderBadge}
-                              title={`Dev order: ${item.devOrder} — click to change`}
                               role="button"
                               tabIndex={-1}
+                              className={`${styles.statusIcon} ${styles[`statusIcon_${item.status || "backlog"}`]}`}
+                              title={`${STATUS_LABELS[item.status || "backlog"]} — click to advance`}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setDevOrderDraft(String(item.devOrder));
-                                setDevOrderEditItemId(item.id);
-                                requestAnimationFrame(() => devOrderInputRef.current?.select());
+                                onUpdateStatus(item.id, nextStatus(item.status || "backlog"));
                               }}
                             >
-                              {item.devOrder}.
-                            </span>
-                          ) : onUpdateDevOrder ? (
-                            <span
-                              className={styles.devOrderBadgeEmpty}
-                              title="Set dev order"
-                              role="button"
-                              tabIndex={-1}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setDevOrderDraft("");
-                                setDevOrderEditItemId(item.id);
-                                requestAnimationFrame(() => devOrderInputRef.current?.focus());
-                              }}
-                            >
-                              #
+                              {STATUS_ICONS[item.status || "backlog"]}
                             </span>
                           ) : null}
                           <span className={styles.itemChipFace}>{item.label}</span>
+                          {hasWaves && itemWave != null && itemWave !== Infinity ? (
+                            <span className={`${styles.waveBadge} ${itemReady ? styles.waveBadgeReady : styles.waveBadgeBlocked}`}>
+                              W{itemWave}
+                            </span>
+                          ) : null}
                           {onOpenItemChat ? (
                             <span
                               role="button"
@@ -762,21 +769,22 @@ export function PlanCompactView({
       <div className={styles.planHeader}>
         <h2 className={styles.planHeading}>Master Plan</h2>
         <div className={styles.planHeaderControls}>
-          {hasAnyDevOrder && maxDevOrder > 1 ? (
-            <div className={styles.devOrderSlider}>
+          {hasWaves ? (
+            <div className={styles.waveSlider}>
+              <span className={styles.waveSliderLabel}>W</span>
               <input
                 type="range"
                 className={styles.devOrderRange}
                 min={1}
-                max={maxDevOrder + 1}
-                value={devOrderFilter ?? maxDevOrder + 1}
+                max={maxWaveNum + 1}
+                value={waveFilter ?? maxWaveNum + 1}
                 onChange={(e) => {
                   const v = Number(e.target.value);
-                  setDevOrderFilter(v > maxDevOrder ? null : v);
+                  setWaveFilter(v > maxWaveNum ? null : v);
                 }}
               />
               <span className={styles.devOrderLabel}>
-                {devOrderFilter == null ? "all" : devOrderFilter}
+                {waveFilter == null ? "all" : waveFilter}
               </span>
             </div>
           ) : null}
@@ -862,6 +870,27 @@ export function PlanCompactView({
                 }}
               >
                 Group plan items…
+              </button>
+            </div>
+          ) : null}
+          {itemContextMenu ? (
+            <div
+              ref={itemContextMenuRef}
+              className={styles.contextMenu}
+              style={{ position: "fixed", top: itemContextMenu.y, left: itemContextMenu.x }}
+              role="menu"
+              aria-label="Item actions"
+            >
+              <button
+                type="button"
+                role="menuitem"
+                className={styles.contextMenuItemDanger}
+                onClick={() => {
+                  onRemoveItem(itemContextMenu.itemId);
+                  setItemContextMenu(null);
+                }}
+              >
+                Delete item
               </button>
             </div>
           ) : null}

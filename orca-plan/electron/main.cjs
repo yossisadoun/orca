@@ -493,6 +493,8 @@ This file describes the structure of \`.orca-plan/plan.json\`. Read this before 
       "claudeSessionId": "uuid",           // optional, set by Orca — do not modify
       "lastNote": "Brief status note",     // optional, where work was left off
       "lastNoteAt": "ISO timestamp",       // optional, when lastNote was set
+      "blockedBy": ["pti-other-item-id"],  // optional, item IDs that must complete first
+      "status": "backlog",                 // optional: "backlog" | "in_progress" | "review" | "done"
       "checklist": [                       // optional, sub-task checklist
         {
           "id": "cl-<timestamp>-<random>",
@@ -500,6 +502,16 @@ This file describes the structure of \`.orca-plan/plan.json\`. Read this before 
           "done": false                    // true when completed
         }
       ]
+    }
+  ],
+  "releaseLog": [
+    {
+      "id": "rl-<timestamp>-<random>",
+      "label": "User-facing description of what changed",
+      "planItemId": "pti-...",           // optional, links to a plan item
+      "addedAt": "ISO timestamp",
+      "released": false,                 // true once shipped
+      "releasedAt": "ISO timestamp"      // optional, set when released
     }
   ]
 }
@@ -513,7 +525,10 @@ This file describes the structure of \`.orca-plan/plan.json\`. Read this before 
 - **claudeSessionId** is managed by Orca. Do not create or modify it.
 - **itemGroupId** groups items visually within a track (e.g. "auth" items). Create a group in planItemGroups first, then reference its ID.
 - **lastNote** is a brief summary of where work was left off. Update it when reaching a stopping point or switching tasks. Include \`lastNoteAt\` as an ISO timestamp.
+- **status** tracks item progress: \`backlog\` (default), \`in_progress\`, \`review\`, \`done\`. Update it as work progresses.
+- **blockedBy** lists item IDs that must complete before this item can start. Use it to express real dependencies. The UI computes parallel "waves" from this — wave 1 items have no blockers and can start immediately. Maximize parallelism by only adding dependencies that are truly required.
 - **checklist** is a sub-task breakdown for an item. Add it when planning the implementation of an item. Set \`done: true\` as sub-tasks are completed.
+- **releaseLog** tracks what changed for release notes. Add entries when completing work — use a user-facing label, not internal jargon. Link to a planItemId when applicable. Ad-hoc entries (bug fixes, quick wins) don't need a plan item link.
 - After editing, save the file. Orca watches for changes and reloads automatically.
 
 ## Related files
@@ -556,7 +571,7 @@ This file describes the structure of \`.orca-plan/plan.json\`. Read this before 
 
       // Merge agent-owned fields from existing file before writing,
       // so we never clobber data the agent wrote (checklist, lastNote, etc.)
-      const agentFields = ['checklist', 'lastNote', 'lastNoteAt', 'claudeSessionId'];
+      const agentFields = ['checklist', 'lastNote', 'lastNoteAt', 'claudeSessionId', 'blockedBy', 'status'];
       try {
         const existing = await fs.readFile(file, 'utf8');
         const diskData = JSON.parse(existing);

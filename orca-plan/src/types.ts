@@ -37,6 +37,20 @@ export interface PlanTrackItem {
   lastNoteAt?: string;
   /** ISO timestamp of last user interaction (chat opened, detail viewed). */
   lastInteractedAt?: string;
+  /** Item IDs that must complete before this item can start. */
+  blockedBy?: string[];
+  /** Item status. */
+  status?: "backlog" | "in_progress" | "review" | "done";
+}
+
+export interface ReleaseLogEntry {
+  id: string;
+  label: string;
+  /** Linked plan item ID, or undefined for ad-hoc entries. */
+  planItemId?: string;
+  addedAt: string;
+  released: boolean;
+  releasedAt?: string;
 }
 
 export interface PlanProjectSnapshot {
@@ -45,6 +59,7 @@ export interface PlanProjectSnapshot {
   planTracks: PlanTrack[];
   planItemGroups: PlanItemGroup[];
   planTrackItems: PlanTrackItem[];
+  releaseLog?: ReleaseLogEntry[];
 }
 
 export interface PlanWorkspaceEntry {

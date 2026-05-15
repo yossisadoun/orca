@@ -34,10 +34,13 @@
   min-width: 0;
 }
 
-.devOrder {
-  color: var(--text-muted);
-  font-size: 14px;
-  font-weight: 500;
+.waveBadge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: #f3f4f6;
+  color: #6b7280;
   flex-shrink: 0;
 }
 
@@ -99,6 +102,56 @@
   margin: 0 0 8px;
   font-size: 12px;
   color: var(--text-muted);
+}
+
+.statusRow {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.statusBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.statusBtn:hover {
+  background: var(--bg-hover, rgba(0, 0, 0, 0.04));
+  color: var(--text-primary);
+}
+
+.statusBacklog {
+  border-color: var(--text-muted);
+  color: var(--text-secondary);
+  background: var(--bg-subtle, #f1f1f3);
+}
+
+.statusInProgress {
+  border-color: #2563eb;
+  color: #2563eb;
+  background: #eff6ff;
+}
+
+.statusReview {
+  border-color: #d97706;
+  color: #d97706;
+  background: #fffbeb;
+}
+
+.statusDone {
+  border-color: #16a34a;
+  color: #16a34a;
+  background: #f0fdf4;
 }
 
 .lastNote {
@@ -290,4 +343,28 @@
   font-size: 12px;
   color: var(--text-muted);
   font-style: italic;
+}
+
+.dangerSection {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.deleteBtn {
+  padding: 5px 14px;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  background: transparent;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.deleteBtn:hover {
+  background: #fef2f2;
 }

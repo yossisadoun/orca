@@ -1,7 +1,16 @@
-import { MessageCircle, Square, CheckSquare, X } from "lucide-react";
+import { Check, CheckSquare, Circle, Eye, Loader, MessageCircle, Square, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PlanTrackItem, PlanTrack } from "../types";
 import styles from "./PlanItemDetailPopup.module.css";
+
+type ItemStatus = "backlog" | "in_progress" | "review" | "done";
+const STATUS_ORDER: ItemStatus[] = ["backlog", "in_progress", "review", "done"];
+const STATUS_META: Record<ItemStatus, { label: string; icon: React.ReactNode; className: string }> = {
+  backlog: { label: "Backlog", icon: <Circle size={14} strokeWidth={2} />, className: "statusBacklog" },
+  in_progress: { label: "In progress", icon: <Loader size={14} strokeWidth={2} />, className: "statusInProgress" },
+  review: { label: "Review", icon: <Eye size={14} strokeWidth={2} />, className: "statusReview" },
+  done: { label: "Done", icon: <Check size={14} strokeWidth={2.5} />, className: "statusDone" },
+};
 
 export function PlanItemDetailPopup({
   item,
@@ -9,13 +18,19 @@ export function PlanItemDetailPopup({
   onClose,
   onUpdateItem,
   onToggleChecklistItem,
+  onUpdateStatus,
+  wave,
+  onDeleteItem,
   onOpenChat,
 }: {
   item: PlanTrackItem;
   track: PlanTrack | undefined;
+  wave?: number;
   onClose: () => void;
   onUpdateItem: (itemId: string, payload: { label?: string; description?: string }) => void;
   onToggleChecklistItem: (itemId: string, checklistItemId: string, done: boolean) => void;
+  onUpdateStatus?: (itemId: string, status: ItemStatus) => void;
+  onDeleteItem?: (itemId: string) => void;
   onOpenChat?: (itemId: string) => void;
 }) {
   const backdropRef = useRef<HTMLDivElement>(null);
@@ -48,8 +63,8 @@ export function PlanItemDetailPopup({
       <div className={styles.popup}>
         <div className={styles.header}>
           <div className={styles.headerLeft}>
-            {item.devOrder != null && item.devOrder > 0 ? (
-              <span className={styles.devOrder}>{item.devOrder}.</span>
+            {wave != null && wave !== Infinity ? (
+              <span className={styles.waveBadge}>W{wave}</span>
             ) : null}
             <h2 className={styles.title}>{item.label}</h2>
           </div>
@@ -73,6 +88,26 @@ export function PlanItemDetailPopup({
 
         {track ? (
           <p className={styles.trackLabel}>Track: {track.title}</p>
+        ) : null}
+
+        {onUpdateStatus ? (
+          <div className={styles.statusRow}>
+            {STATUS_ORDER.map((s) => {
+              const meta = STATUS_META[s];
+              const isActive = (item.status || "backlog") === s;
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  className={`${styles.statusBtn} ${isActive ? styles[meta.className] : ""}`}
+                  onClick={() => onUpdateStatus(item.id, s)}
+                >
+                  {meta.icon}
+                  {meta.label}
+                </button>
+              );
+            })}
+          </div>
         ) : null}
 
         {item.lastNote ? (
@@ -146,6 +181,18 @@ export function PlanItemDetailPopup({
             </p>
           )}
         </div>
+
+        {onDeleteItem ? (
+          <div className={styles.dangerSection}>
+            <button
+              type="button"
+              className={styles.deleteBtn}
+              onClick={() => { onDeleteItem(item.id); onClose(); }}
+            >
+              Delete item
+            </button>
+          </div>
+        ) : null}
       </div>
     </div>
   );

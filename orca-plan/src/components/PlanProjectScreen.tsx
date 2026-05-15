@@ -1,14 +1,16 @@
-import { ArrowLeft, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { ArrowLeft, MessageCircle, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import type { PlanItemGroup, PlanProjectSnapshot, PlanTrack, PlanTrackItem, PlanWorkspaceEntry } from "../types";
 import { suppressBackupFlush } from "../App";
 import { canUseWorkspaceFileTree, canUseWorkspacePty, listPlanVersions, loadPlanVersion, readPlanBackup, savePlanVersion, subscribeWorkspaceFsChanged, type PlanVersionEntry } from "../orcaPlanHost";
+import { computeWaves } from "../utils/parallelWaves";
 import { pruneOrphanPlanItemGroups } from "../utils/planItemDisplay";
 import { nextId } from "../utils/persistence";
 import { ClaudeAgentPanel } from "./ClaudeAgentPanel";
 import { PlanCompactView } from "./PlanCompactView";
 import { PlanItemDetailPopup } from "./PlanItemDetailPopup";
 import { ProjectDocs } from "./ProjectDocs";
+import { ReleaseLog } from "./ReleaseLog";
 import styles from "./PlanProjectScreen.module.css";
 import { WorkspaceFileTree } from "./WorkspaceFileTree";
 
@@ -62,7 +64,7 @@ export function PlanProjectScreen({
       const diskItems = r.snapshot.planTrackItems ?? [];
       if (diskItems.length === 0) return;
       const diskById = new Map(diskItems.map((i: PlanTrackItem) => [i.id, i]));
-      const agentFields: (keyof PlanTrackItem)[] = ["checklist", "lastNote", "lastNoteAt", "claudeSessionId"];
+      const agentFields: (keyof PlanTrackItem)[] = ["checklist", "lastNote", "lastNoteAt", "claudeSessionId", "blockedBy", "status"];
       let changed = false;
       const merged = snapshot.planTrackItems.map((item) => {
         const diskItem = diskById.get(item.id);
@@ -84,6 +86,7 @@ export function PlanProjectScreen({
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceRootEffective, project.id]);
+  const [agentMinimized, setAgentMinimized] = useState(false);
   const [fileTreeCollapsed, setFileTreeCollapsed] = useState(() => {
     try { return localStorage.getItem("orca-plan.file-tree-collapsed") === "true"; } catch { return false; }
   });
@@ -115,8 +118,18 @@ export function PlanProjectScreen({
 
   const openItemChat = useCallback((itemId: string) => {
     touchItem(itemId);
+    // Auto-set in_progress when opening chat for a backlog item
+    const item = planTrackItems.find((i) => i.id === itemId);
+    if (item && (!item.status || item.status === "backlog")) {
+      patch((s) => ({
+        ...s,
+        planTrackItems: s.planTrackItems.map((i) =>
+          i.id === itemId ? { ...i, status: "in_progress" as const } : i,
+        ),
+      }));
+    }
     setActiveItemChatId(itemId);
-  }, [touchItem]);
+  }, [touchItem, planTrackItems, patch]);
 
   const openItemDetail = useCallback((itemId: string) => {
     touchItem(itemId);
@@ -129,6 +142,7 @@ export function PlanProjectScreen({
   // --- Auto-save plan versions ---
   const snapshotJsonRef = useRef("");
   const viewingHistoryRef = useRef(false);
+  const suppressWatcherUntilRef = useRef(0);
   useEffect(() => {
     if (!workspaceRootEffective) return;
     // Don't save versions when browsing history
@@ -138,6 +152,8 @@ export function PlanProjectScreen({
     const isFirst = snapshotJsonRef.current === "";
     snapshotJsonRef.current = json;
     if (isFirst) return;
+    // Suppress watcher from reverting UI changes
+    suppressWatcherUntilRef.current = Date.now() + 5000;
     const id = window.setTimeout(() => {
       void savePlanVersion(workspaceRootEffective, "ui", json);
     }, 1000);
@@ -149,6 +165,8 @@ export function PlanProjectScreen({
     if (!workspaceRootEffective) return;
     const unsub = subscribeWorkspaceFsChanged(({ workspaceRoot: changedRoot }) => {
       if (changedRoot !== workspaceRootEffective) return;
+      // Skip if we recently made a UI change (avoids reverting our own edits)
+      if (Date.now() < suppressWatcherUntilRef.current) return;
       void readPlanBackup(workspaceRootEffective).then((r) => {
         if (!r.ok) return;
         const diskSnapshot = r.snapshot;
@@ -515,6 +533,27 @@ export function PlanProjectScreen({
             onOpenItemDetail={openItemDetail}
             heatMapEnabled={heatMapEnabled}
             onToggleHeatMap={() => setHeatMapEnabled((v) => !v)}
+            onUpdateStatus={(itemId, status) => {
+              patch((s) => {
+                const item = s.planTrackItems.find((i) => i.id === itemId);
+                const addToLog = status === "done" && item && item.status !== "done";
+                return {
+                  ...s,
+                  planTrackItems: s.planTrackItems.map((i) =>
+                    i.id === itemId ? { ...i, status } : i,
+                  ),
+                  releaseLog: addToLog
+                    ? [...(s.releaseLog ?? []), {
+                        id: nextId("rl"),
+                        label: item!.label,
+                        planItemId: itemId,
+                        addedAt: new Date().toISOString(),
+                        released: false,
+                      }]
+                    : s.releaseLog,
+                };
+              });
+            }}
             onUpdateDevOrder={(itemId, devOrder) => {
               patch((s) => ({
                 ...s,
@@ -529,45 +568,76 @@ export function PlanProjectScreen({
             onRestoreVersion={handleRestoreVersion}
             isViewingHistory={isViewingHistory}
           />
+          <ReleaseLog
+            entries={snapshot.releaseLog ?? []}
+            onUpdate={(entries) => {
+              patch((s) => ({ ...s, releaseLog: entries }));
+            }}
+          />
             </div>
           </main>
         </div>
-        {showAgentPanel ? (
-          <>
-            <div
-              className={styles.resizeHandle}
-              onPointerDown={handleResizeStart}
-              aria-label="Resize Claude panel"
-            />
-            <aside
-              className={styles.agentAside}
-              style={{ width: agentWidth }}
-              aria-label="Claude Code terminal"
-            >
-              <ClaudeAgentPanel
-              key={activeItemChatId ? `item-${activeItemChatId}` : workspaceRootEffective}
-              workspaceRoot={workspaceRootEffective}
-              snapshot={snapshot}
-              activeItem={activeItemChat}
-              onBackToProject={activeItemChatId ? () => setActiveItemChatId(null) : undefined}
-              onSessionDetected={activeItemChatId ? (sessionId) => {
-                patch((s) => ({
-                  ...s,
-                  planTrackItems: s.planTrackItems.map((i) =>
-                    i.id === activeItemChatId ? { ...i, claudeSessionId: sessionId } : i,
-                  ),
-                }));
-              } : undefined}
-            />
-            </aside>
-          </>
-        ) : null}
         </div>
       </div>
+      {showAgentPanel && agentMinimized ? (
+        <button
+          type="button"
+          className={styles.bottomPanelTab}
+          onClick={() => setAgentMinimized(false)}
+        >
+          <MessageCircle size={14} strokeWidth={2} />
+          {activeItemChat ? activeItemChat.label : "Master Plan"}
+        </button>
+      ) : null}
+      {showAgentPanel && !agentMinimized ? (
+        <div className={styles.bottomPanel} style={{ height: agentWidth }}>
+          <div
+            className={styles.bottomResizeHandle}
+            onPointerDown={(e: React.PointerEvent) => {
+              e.preventDefault();
+              const startY = e.clientY;
+              const startH = agentWidth;
+              const onMove = (ev: PointerEvent) => {
+                const delta = startY - ev.clientY;
+                const next = Math.max(150, Math.min(800, startH + delta));
+                setAgentWidth(next);
+              };
+              const onUp = () => {
+                document.removeEventListener("pointermove", onMove);
+                document.removeEventListener("pointerup", onUp);
+                document.body.style.cursor = "";
+                document.body.style.userSelect = "";
+                setAgentWidth((h) => { localStorage.setItem("orca-plan.agent-panel-width", String(h)); return h; });
+              };
+              document.body.style.cursor = "row-resize";
+              document.body.style.userSelect = "none";
+              document.addEventListener("pointermove", onMove);
+              document.addEventListener("pointerup", onUp);
+            }}
+          />
+          <ClaudeAgentPanel
+            key={activeItemChatId ? `item-${activeItemChatId}` : workspaceRootEffective}
+            workspaceRoot={workspaceRootEffective}
+            snapshot={snapshot}
+            activeItem={activeItemChat}
+            onBackToProject={activeItemChatId ? () => setActiveItemChatId(null) : undefined}
+            onMinimize={() => setAgentMinimized(true)}
+            onSessionDetected={activeItemChatId ? (sessionId) => {
+              patch((s) => ({
+                ...s,
+                planTrackItems: s.planTrackItems.map((i) =>
+                  i.id === activeItemChatId ? { ...i, claudeSessionId: sessionId } : i,
+                ),
+              }));
+            } : undefined}
+          />
+        </div>
+      ) : null}
       {detailItem ? (
         <PlanItemDetailPopup
           item={detailItem}
           track={detailTrack}
+          wave={computeWaves(planTrackItems).get(detailItem.id)}
           onClose={() => setDetailItemId(null)}
           onUpdateItem={(itemId, payload) => {
             patch((s) => ({
@@ -587,13 +657,41 @@ export function PlanProjectScreen({
               ...s,
               planTrackItems: s.planTrackItems.map((i) => {
                 if (i.id !== itemId || !i.checklist) return i;
+                const newChecklist = i.checklist.map((cl) =>
+                  cl.id === clId ? { ...cl, done } : cl,
+                );
                 return {
                   ...i,
-                  checklist: i.checklist.map((cl) =>
-                    cl.id === clId ? { ...cl, done } : cl,
-                  ),
+                  checklist: newChecklist,
                 };
               }),
+            }));
+          }}
+          onUpdateStatus={(itemId, status) => {
+            patch((s) => {
+              const item = s.planTrackItems.find((i) => i.id === itemId);
+              const addToLog = status === "done" && item && item.status !== "done";
+              return {
+                ...s,
+                planTrackItems: s.planTrackItems.map((i) =>
+                  i.id === itemId ? { ...i, status } : i,
+                ),
+                releaseLog: addToLog
+                  ? [...(s.releaseLog ?? []), {
+                      id: nextId("rl"),
+                      label: item!.label,
+                      planItemId: itemId,
+                      addedAt: new Date().toISOString(),
+                      released: false,
+                    }]
+                  : s.releaseLog,
+              };
+            });
+          }}
+          onDeleteItem={(itemId) => {
+            patch((s) => ({
+              ...s,
+              planTrackItems: s.planTrackItems.filter((i) => i.id !== itemId),
             }));
           }}
           onOpenChat={showAgentPanel ? (id) => { openItemChat(id); setDetailItemId(null); } : undefined}
