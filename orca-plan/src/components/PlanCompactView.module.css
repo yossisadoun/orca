@@ -1,0 +1,1024 @@
+.root {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 18px 20px 24px;
+  box-sizing: border-box;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+}
+
+.planHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.planHeaderControls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.planHeading {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.heatMapToggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.heatMapToggle:hover {
+  background: var(--bg-hover, rgba(0, 0, 0, 0.06));
+  color: var(--text-primary);
+}
+
+.heatMapToggleActive {
+  color: #e65100;
+  background: rgba(230, 81, 0, 0.08);
+}
+
+.heatMapToggleActive:hover {
+  background: rgba(230, 81, 0, 0.14);
+}
+
+.timeMachine {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.timeMachineBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.timeMachineBtn:hover:not(:disabled) {
+  background: var(--bg-hover, rgba(0, 0, 0, 0.06));
+  color: var(--text-primary);
+}
+
+.timeMachineBtn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.timeMachineLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  padding: 2px 6px;
+  border-radius: 4px;
+  min-width: 40px;
+  justify-content: center;
+  user-select: none;
+}
+
+.timeMachineLabelActive {
+  background: var(--accent-bg, #e8e0ff);
+  color: var(--accent-text, #5b21b6);
+  font-weight: 600;
+}
+
+.historyBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 10px;
+  margin-bottom: 12px;
+  border-radius: 6px;
+  background: var(--accent-bg, #e8e0ff);
+  color: var(--accent-text, #5b21b6);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.historyRestoreBtn {
+  flex-shrink: 0;
+  padding: 3px 10px;
+  border: 1px solid var(--accent-text, #5b21b6);
+  border-radius: 5px;
+  background: white;
+  color: var(--accent-text, #5b21b6);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.historyRestoreBtn:hover {
+  background: var(--accent-text, #5b21b6);
+  color: white;
+}
+
+/* --- Dev order slider --- */
+
+.devOrderSlider {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  max-width: 200px;
+  margin: 0 12px;
+}
+
+.devOrderLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  min-width: 28px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.devOrderRange {
+  flex: 1;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--border-subtle);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.devOrderRange::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent-text, #5b21b6);
+  border: 2px solid white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+}
+
+.devOrderResetBtn {
+  padding: 1px 6px;
+  border: none;
+  border-radius: 4px;
+  background: var(--bg-subtle, #f1f1f3);
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.devOrderResetBtn:hover {
+  background: var(--bg-hover, rgba(0, 0, 0, 0.06));
+  color: var(--text-primary);
+}
+
+/* --- Dev order badge on chips --- */
+
+.devOrderBadge {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.devOrderBadge:hover {
+  color: var(--text-primary);
+}
+
+.devOrderBadgeEmpty {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.itemChip:hover .devOrderBadgeEmpty {
+  opacity: 0.4;
+}
+
+.devOrderBadgeEmpty:hover {
+  opacity: 1 !important;
+}
+
+.devOrderInput {
+  width: 20px;
+  padding: 0;
+  border: none;
+  border-bottom: 1px solid var(--text-muted);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  text-align: left;
+  outline: none;
+  flex-shrink: 0;
+}
+
+.emptyBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  max-width: 420px;
+}
+
+.emptyAddTrack {
+  align-self: flex-start;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  border-radius: 6px;
+  transition: opacity 0.15s ease;
+}
+
+.rowDragging {
+  opacity: 0.45;
+}
+
+.rowDropTarget {
+  box-shadow: inset 0 0 0 2px var(--border-strong);
+  background: var(--bg-subtle);
+}
+
+.dragHandle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: grab;
+  flex-shrink: 0;
+  border-radius: 4px;
+  font: inherit;
+  touch-action: none;
+}
+
+.dragHandle:hover {
+  color: var(--text-secondary);
+  background: var(--bg-subtle);
+}
+
+.dragHandle:active {
+  cursor: grabbing;
+}
+
+.dragHandle:focus-visible {
+  outline: 2px solid var(--text-muted);
+  outline-offset: 1px;
+}
+
+.trackLeft {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  max-width: min(280px, 42%);
+}
+
+.trackChipBtn {
+  flex-shrink: 1;
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  padding: 5px 10px;
+  border-radius: 4px;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  letter-spacing: 0.01em;
+  line-height: 1.4;
+  color: #fafafa;
+  background: var(--text-primary);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.12);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    box-shadow 0.12s ease,
+    filter 0.12s ease;
+}
+
+.trackChipBtn:hover {
+  filter: brightness(1.06);
+}
+
+.trackChipBtn:focus-visible {
+  outline: 2px solid var(--text-muted);
+  outline-offset: 2px;
+}
+
+.trackChipBtnActive {
+  box-shadow:
+    inset 0 0 0 1px rgb(0 0 0 / 0.12),
+    0 0 0 2px var(--border-strong);
+}
+
+/** Text field that matches `.trackChipBtn` visuals (new track name in place). */
+.trackChipInput {
+  display: inline-flex;
+  align-items: center;
+  width: auto;
+  min-width: 12ch;
+  max-width: min(200px, 100%);
+  margin: 0;
+  border: none;
+  outline: none;
+  cursor: text;
+  appearance: none;
+  -webkit-appearance: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+  text-overflow: clip;
+}
+
+.trackChipInput::placeholder {
+  color: rgb(250 250 250 / 0.5);
+}
+
+.trackChipInput:focus {
+  outline: none;
+}
+
+.trackAddNameForm {
+  margin: 0;
+  display: inline-block;
+  min-width: 0;
+}
+
+.itemAddNameForm {
+  margin: 0;
+  display: inline-block;
+  min-width: 0;
+}
+
+/** Text field that matches `.itemChip` visuals (new item label in place). */
+.itemChipInput {
+  display: inline-flex;
+  align-items: center;
+  min-width: 12ch;
+  max-width: min(320px, 100%);
+  margin: 0;
+  border: none;
+  outline: none;
+  cursor: text;
+  appearance: none;
+  -webkit-appearance: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+  text-overflow: clip;
+}
+
+.itemChipInput::placeholder {
+  color: var(--text-muted);
+}
+
+.itemChipInput:focus {
+  outline: none;
+}
+
+.items {
+  display: contents;
+}
+
+.itemsWrap {
+  display: contents;
+}
+
+.itemChip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--text-primary);
+  background: var(--bg-subtle);
+  border: none;
+  box-shadow: inset 0 0 0 1px var(--border-subtle);
+  max-width: min(100%, 320px);
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    background 0.12s ease,
+    box-shadow 0.12s ease;
+}
+
+.itemChipFace {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.itemChipRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.itemChipDimmed {
+  opacity: 0.2;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+
+.itemChipChatActive {
+  background: var(--accent-bg, #e8e0ff);
+  box-shadow: inset 0 0 0 1.5px var(--accent-text, #5b21b6);
+  color: var(--accent-text, #5b21b6);
+}
+
+.itemChipChatActive .itemChatBtn {
+  opacity: 1;
+  color: var(--accent-text, #5b21b6);
+}
+
+.itemChatBtn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  color: var(--text-muted);
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity 0.12s, background 0.12s;
+}
+
+.itemChip:hover .itemChatBtn {
+  opacity: 0.7;
+}
+
+.itemChatBtn:hover {
+  opacity: 1 !important;
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--accent-text, #5b21b6);
+}
+
+.itemChipSpecifyBadge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.itemChipSpecifyIcon {
+  display: flex;
+  color: var(--text-muted);
+  opacity: 0.92;
+}
+
+.itemChipWorkflowBadge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.itemChipWorkflowSpin {
+  animation: itemChipWorkflowSpin 0.9s linear infinite;
+}
+
+@keyframes itemChipWorkflowSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.itemChipWorkflow_working {
+  color: rgb(29 78 216);
+}
+
+.itemChipWorkflow_attention {
+  color: rgb(161 98 7);
+}
+
+.itemChipWorkflow_merging {
+  color: rgb(107 33 168);
+}
+
+.itemChipWorkflowMergingCritical {
+  color: rgb(185 28 28);
+  animation: itemChipMergingGlow 1.1s ease-in-out infinite;
+}
+
+@keyframes itemChipMergingGlow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 1px rgb(239 68 68 / 0.35));
+    transform: scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 5px rgb(239 68 68 / 0.9));
+    transform: scale(1.08);
+  }
+}
+
+.itemChipWorkflow_error {
+  color: rgb(185 28 28);
+}
+
+.itemChipWorkflow_completed_merge {
+  color: rgb(21 128 61);
+}
+
+.itemChipTooltip {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 8px);
+  z-index: 50;
+  transform: translateX(-50%) translateY(-4px);
+  box-sizing: border-box;
+  /* `width:auto` shrink-to-fits to the chip (~320px). `fit-content` follows text width; cap with max-width. */
+  width: fit-content;
+  max-width: min(480px, calc(100vw - 24px));
+  min-width: 180px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 450;
+  line-height: 1.35;
+  text-align: left;
+  color: var(--text-primary);
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  box-shadow:
+    0 4px 16px rgb(0 0 0 / 0.1),
+    0 0 0 0.5px rgb(0 0 0 / 0.03);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.14s ease,
+    transform 0.14s ease,
+    visibility 0.14s;
+}
+
+.itemChipTooltipBoardRef {
+  display: block;
+  margin-top: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: -0.01em;
+}
+
+.itemChipTooltipLine {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 450;
+  line-height: 1.4;
+  color: var(--text-secondary);
+  white-space: normal;
+}
+
+.itemChipTooltipHint {
+  display: block;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 10px;
+  font-weight: 450;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+.itemChipTooltipNote {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: normal;
+  line-height: 1.4;
+}
+
+.itemChipTooltipDesc {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 450;
+  color: var(--text-secondary);
+  white-space: normal;
+}
+
+.itemChip:hover .itemChipTooltip,
+.itemChip:focus-visible .itemChipTooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+.itemChipDragging .itemChipTooltip,
+.itemChipActive .itemChipTooltip {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.itemChip:hover {
+  background: var(--bg-hover);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+
+.itemChip:focus-visible {
+  outline: 2px solid var(--text-muted);
+  outline-offset: 1px;
+}
+
+.itemChipActive {
+  box-shadow: inset 0 0 0 1px var(--text-muted);
+  background: var(--bg-hover);
+}
+
+.itemChipSelected {
+  box-shadow:
+    inset 0 0 0 1px rgb(0 0 0 / 0.08),
+    0 0 0 2px rgb(59 130 246 / 0.45);
+}
+
+.itemChipChatPick:not(.itemChipSelected) {
+  box-shadow:
+    inset 0 0 0 1px rgb(34 197 94 / 0.45),
+    0 0 0 2px rgb(34 197 94 / 0.35);
+}
+
+.itemChip[draggable="true"] {
+  cursor: grab;
+}
+
+.itemChipDragging {
+  cursor: grabbing;
+  opacity: 0.55;
+}
+
+.itemChipDropTarget {
+  box-shadow:
+    inset 0 0 0 1px rgb(59 130 246 / 0.35),
+    inset 3px 0 0 0 rgb(59 130 246 / 0.9),
+    0 0 0 1px rgb(59 130 246 / 0.35);
+}
+
+.planItemDropEnd {
+  flex: 0 0 14px;
+  width: 14px;
+  min-width: 14px;
+  min-height: 28px;
+  align-self: stretch;
+  border-radius: 4px;
+  transition: background 0.1s ease;
+}
+
+.planItemDropEndActive {
+  background: rgb(59 130 246 / 0.12);
+  box-shadow: inset 0 0 0 2px rgb(59 130 246 / 0.35);
+}
+
+.itemCluster {
+  display: contents;
+}
+
+.itemClusterLabeled {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: stretch;
+  max-width: 100%;
+  border-radius: 6px;
+  min-width: 0;
+}
+
+
+.itemClusterRail {
+  flex-shrink: 0;
+  width: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 2px;
+  border-radius: 6px 0 0 6px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-subtle);
+  border-right: none;
+}
+
+.itemClusterLabel {
+  writing-mode: vertical-lr;
+  text-orientation: mixed;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  max-height: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.itemClusterChips {
+  display: contents;
+}
+
+.itemClusterLabeled .itemClusterChips {
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 2px 4px 2px 0;
+  border-radius: 0 6px 6px 0;
+  border: 1px solid var(--border-subtle);
+  border-left: none;
+  background: var(--surface-card);
+}
+
+.addItemBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 4px;
+  border: 1px dashed var(--border-strong);
+  background: var(--surface-card);
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.addItemBtn:hover {
+  color: var(--text-secondary);
+  border-color: var(--text-muted);
+  background: var(--bg-subtle);
+}
+
+.addItemBtnActive {
+  border-style: solid;
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+  background: var(--bg-subtle);
+}
+
+.addTrackRow {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.editItemSendSpecifyRow {
+  margin-top: 12px;
+}
+
+.btnSendSpecify {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-subtle);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: center;
+}
+
+.btnSendSpecify:hover:not(:disabled) {
+  background: var(--bg-hover);
+  border-color: var(--border-strong);
+}
+
+.btnSendSpecify:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.editItemActions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.editItemActionsRight {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.btnRemoveItem {
+  padding: 7px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #b91c1c;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.btnRemoveItem:hover {
+  background: rgb(185 28 28 / 0.08);
+  color: #991b1b;
+}
+
+.contextMenu {
+  z-index: 200;
+  min-width: 168px;
+  padding: 4px;
+  border-radius: 8px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-strong);
+  box-shadow: 0 8px 28px rgb(0 0 0 / 0.14);
+}
+
+.contextMenuItem {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.contextMenuItem:hover {
+  background: var(--bg-hover);
+}
+
+.groupDialogBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgb(0 0 0 / 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.groupDialog {
+  width: min(360px, 100%);
+  padding: 20px;
+  border-radius: 12px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 20px 48px rgb(0 0 0 / 0.2);
+}
+
+.groupDialogTitle {
+  margin: 0 0 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.groupDialogLabel {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.groupDialogInput {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  font: inherit;
+  font-size: 14px;
+  margin-bottom: 16px;
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+}
+
+.groupDialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.groupDialogBtnGhost {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.groupDialogBtnGhost:hover {
+  background: var(--bg-subtle);
+}
+
+.groupDialogBtnPrimary {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  background: var(--text-primary);
+  color: #fafafa;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.groupDialogBtnPrimary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.groupDialogBtnPrimary:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
