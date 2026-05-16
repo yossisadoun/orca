@@ -1,7 +1,6 @@
 import { ArrowLeft, MessageCircle, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import type { PlanItemGroup, PlanProjectSnapshot, PlanTrack, PlanTrackItem, PlanWorkspaceEntry } from "../types";
-import { suppressBackupFlush } from "../App";
 import { canUseWorkspaceFileTree, canUseWorkspacePty, listPlanVersions, loadPlanVersion, readPlanBackup, savePlanVersion, subscribeWorkspaceFsChanged, type PlanVersionEntry } from "../orcaPlanHost";
 import { computeWaves } from "../utils/parallelWaves";
 import { pruneOrphanPlanItemGroups } from "../utils/planItemDisplay";
@@ -71,33 +70,34 @@ export function PlanProjectScreen({
     });
   }, [workspaceRootEffective, project.github, onUpdateGitHub]);
 
-  // On project open, merge agent-written fields from disk plan.json into memory
+  // On project open, merge agent data from plan.json into memory.
+  // plan.json is the agent's working copy; workspace.json is Orca's.
+  // Merge: take agent-written fields from disk, keep user-owned fields from memory.
   useEffect(() => {
     if (!workspaceRootEffective) return;
     void readPlanBackup(workspaceRootEffective).then((r) => {
       if (!r.ok) return;
-      const diskItems = r.snapshot.planTrackItems ?? [];
-      if (diskItems.length === 0) return;
-      const diskById = new Map(diskItems.map((i: PlanTrackItem) => [i.id, i]));
-      const agentFields: (keyof PlanTrackItem)[] = ["checklist", "lastNote", "lastNoteAt", "claudeSessionId", "blockedBy", "status"];
-      let changed = false;
-      const merged = snapshot.planTrackItems.map((item) => {
-        const diskItem = diskById.get(item.id);
-        if (!diskItem) return item;
-        let patched = item;
-        for (const field of agentFields) {
-          if (diskItem[field] !== undefined && diskItem[field] !== null && (item[field] === undefined || item[field] === null)) {
-            if (patched === item) patched = { ...item };
-            (patched as unknown as Record<string, unknown>)[field] = diskItem[field];
-            changed = true;
-          }
-        }
-        return patched;
+      const disk = r.snapshot as PlanProjectSnapshot;
+      const diskJson = JSON.stringify(disk);
+      const memJson = JSON.stringify(snapshot);
+      if (diskJson === memJson) return;
+
+      const memById = new Map(snapshot.planTrackItems.map((i) => [i.id, i]));
+      const mergedItems = disk.planTrackItems.map((diskItem: PlanTrackItem) => {
+        const memItem = memById.get(diskItem.id);
+        if (!memItem) return diskItem;
+        return {
+          ...diskItem,
+          status: memItem.status ?? diskItem.status, // prefer memory if set
+          lastInteractedAt: memItem.lastInteractedAt,
+        };
       });
-      if (changed) {
-        suppressBackupFlush(3000);
-        onUpdateSnapshot({ ...snapshot, planTrackItems: merged });
-      }
+
+      onUpdateSnapshot({
+        ...disk,
+        planTrackItems: mergedItems,
+        releaseLog: snapshot.releaseLog, // keep user-owned
+      });
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceRootEffective, project.id]);
@@ -144,12 +144,33 @@ export function PlanProjectScreen({
       }));
     }
     setActiveItemChatId(itemId);
+    setAgentMinimized(false);
+    // Mark as seen
+    void window.orcaPlan?.ptyMarkSeen?.(itemId);
   }, [touchItem, planTrackItems, patch]);
 
   const openItemDetail = useCallback((itemId: string) => {
     touchItem(itemId);
     setDetailItemId(itemId);
+    void window.orcaPlan?.ptyMarkSeen?.(itemId);
   }, [touchItem]);
+
+  // --- Unseen chat sessions ---
+  const [unseenSessions, setUnseenSessions] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    const fn = window.orcaPlan?.ptyUnseenSessions;
+    if (!fn) return;
+    const poll = () => {
+      void fn().then((raw: unknown) => {
+        if (raw && typeof raw === "object" && "sessions" in raw) {
+          setUnseenSessions(new Set((raw as { sessions: string[] }).sessions));
+        }
+      });
+    };
+    poll();
+    const id = window.setInterval(poll, 2000);
+    return () => window.clearInterval(id);
+  }, []);
 
   // --- Heat map toggle ---
   const [heatMapEnabled, setHeatMapEnabled] = useState(false);
@@ -167,37 +188,58 @@ export function PlanProjectScreen({
     const isFirst = snapshotJsonRef.current === "";
     snapshotJsonRef.current = json;
     if (isFirst) return;
-    // Suppress watcher from reverting UI changes
-    suppressWatcherUntilRef.current = Date.now() + 5000;
+    // Brief suppress to avoid unnecessary watcher reads from version saves
+    suppressWatcherUntilRef.current = Date.now() + 2000;
     const id = window.setTimeout(() => {
       void savePlanVersion(workspaceRootEffective, "ui", json);
     }, 1000);
     return () => window.clearTimeout(id);
   }, [workspaceRootEffective, snapshot]);
 
-  // --- Watch for external plan.json changes (e.g. Claude agent edits) ---
+  // --- Watch for external plan.json changes (agent edits) ---
+  // Since Orca doesn't write plan.json, any change is from the agent.
+  // Merge agent data into the current snapshot without overwriting user state.
   useEffect(() => {
     if (!workspaceRootEffective) return;
     const unsub = subscribeWorkspaceFsChanged(({ workspaceRoot: changedRoot }) => {
       if (changedRoot !== workspaceRootEffective) return;
-      // Skip if we recently made a UI change (avoids reverting our own edits)
       if (Date.now() < suppressWatcherUntilRef.current) return;
       void readPlanBackup(workspaceRootEffective).then((r) => {
         if (!r.ok) return;
-        const diskSnapshot = r.snapshot;
-        // Only update if the disk version is different from what we have
+        const diskSnapshot = r.snapshot as PlanProjectSnapshot;
         const diskJson = JSON.stringify(diskSnapshot);
-        if (diskJson !== snapshotJsonRef.current) {
-          snapshotJsonRef.current = diskJson;
-          suppressBackupFlush(3000); // Don't write back what we just read
-          onUpdateSnapshot(diskSnapshot);
-          // Save as agent version
-          void savePlanVersion(workspaceRootEffective, "agent", diskJson);
-        }
+        if (diskJson === snapshotJsonRef.current) return;
+        snapshotJsonRef.current = diskJson;
+
+        // Merge: take the disk snapshot as the base, but preserve user-owned fields from memory
+        patch((currentSnapshot) => {
+          const currentById = new Map(currentSnapshot.planTrackItems.map((i) => [i.id, i]));
+
+          // Use disk tracks and items as the structure (agent may have added/removed)
+          const mergedItems = diskSnapshot.planTrackItems.map((diskItem: PlanTrackItem) => {
+            const memItem = currentById.get(diskItem.id);
+            if (!memItem) return diskItem; // new item from agent
+            // Prefer memory for user-owned fields, disk for everything else
+            return {
+              ...diskItem,
+              status: memItem.status, // user owns status
+              lastInteractedAt: memItem.lastInteractedAt,
+            };
+          });
+
+          return {
+            ...diskSnapshot,
+            planTrackItems: mergedItems,
+            // Keep release log from memory (user-owned)
+            releaseLog: currentSnapshot.releaseLog,
+          };
+        });
+
+        void savePlanVersion(workspaceRootEffective, "agent", diskJson);
       });
     });
     return () => { unsub?.(); };
-  }, [workspaceRootEffective, onUpdateSnapshot]);
+  }, [workspaceRootEffective, patch]);
 
   // --- Version history (time machine) ---
   const [versions, setVersions] = useState<PlanVersionEntry[]>([]);
@@ -582,9 +624,10 @@ export function PlanProjectScreen({
               });
             }}
             onMovePlanItem={handleMovePlanItem}
-            onOpenItemChat={showAgentPanel ? openItemChat : undefined}
+            onOpenItemChat={undefined}
             activeItemChatId={activeItemChatId}
             onOpenItemDetail={openItemDetail}
+            unseenSessions={unseenSessions}
             heatMapEnabled={heatMapEnabled}
             onToggleHeatMap={() => setHeatMapEnabled((v) => !v)}
             onUpdateStatus={(itemId, status) => {
@@ -640,7 +683,7 @@ export function PlanProjectScreen({
           onClick={() => setAgentMinimized(false)}
         >
           <MessageCircle size={14} strokeWidth={2} />
-          {activeItemChat ? activeItemChat.label : "Master Plan"}
+          Master Plan
         </button>
       ) : null}
       {showAgentPanel && !agentMinimized ? (
@@ -670,21 +713,11 @@ export function PlanProjectScreen({
             }}
           />
           <ClaudeAgentPanel
-            key={activeItemChatId ? `item-${activeItemChatId}` : workspaceRootEffective}
+            key={workspaceRootEffective}
             workspaceRoot={workspaceRootEffective}
             snapshot={snapshot}
-            activeItem={activeItemChat}
             github={project.github}
-            onBackToProject={activeItemChatId ? () => setActiveItemChatId(null) : undefined}
             onMinimize={() => setAgentMinimized(true)}
-            onSessionDetected={activeItemChatId ? (sessionId) => {
-              patch((s) => ({
-                ...s,
-                planTrackItems: s.planTrackItems.map((i) =>
-                  i.id === activeItemChatId ? { ...i, claudeSessionId: sessionId } : i,
-                ),
-              }));
-            } : undefined}
           />
         </div>
       ) : null}
@@ -693,6 +726,9 @@ export function PlanProjectScreen({
           item={detailItem}
           track={detailTrack}
           wave={computeWaves(planTrackItems).get(detailItem.id)}
+          workspaceRoot={workspaceRootEffective}
+          snapshot={snapshot}
+          github={project.github}
           onClose={() => setDetailItemId(null)}
           onUpdateItem={(itemId, payload) => {
             patch((s) => ({
@@ -743,13 +779,20 @@ export function PlanProjectScreen({
               };
             });
           }}
+          onSessionDetected={detailItemId ? (sessionId) => {
+            patch((s) => ({
+              ...s,
+              planTrackItems: s.planTrackItems.map((i) =>
+                i.id === detailItemId ? { ...i, claudeSessionId: sessionId } : i,
+              ),
+            }));
+          } : undefined}
           onDeleteItem={(itemId) => {
             patch((s) => ({
               ...s,
               planTrackItems: s.planTrackItems.filter((i) => i.id !== itemId),
             }));
           }}
-          onOpenChat={showAgentPanel ? (id) => { openItemChat(id); setDetailItemId(null); } : undefined}
         />
       ) : null}
     </div>

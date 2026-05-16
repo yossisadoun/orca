@@ -28,6 +28,8 @@ contextBridge.exposeInMainWorld('orcaPlan', {
   },
   ptySpawn: (opts) => ipcRenderer.invoke('orca-plan:pty-spawn', opts),
   ptyConnect: (sessionKey) => ipcRenderer.invoke('orca-plan:pty-connect', { sessionKey }),
+  ptyMarkSeen: (sessionKey) => ipcRenderer.invoke('orca-plan:pty-mark-seen', { sessionKey }),
+  ptyUnseenSessions: () => ipcRenderer.invoke('orca-plan:pty-unseen-sessions'),
   ptyList: () => ipcRenderer.invoke('orca-plan:pty-list'),
   ptyWrite: (sessionKey, data) => ipcRenderer.invoke('orca-plan:pty-write', { sessionKey, data }),
   ptyResize: (sessionKey, cols, rows) => ipcRenderer.invoke('orca-plan:pty-resize', { sessionKey, cols, rows }),
@@ -39,6 +41,8 @@ contextBridge.exposeInMainWorld('orcaPlan', {
     ipcRenderer.invoke('orca-plan:detect-claude-session', { workspaceRoot }),
   writeTaskContext: (workspaceRoot, itemId, content) =>
     ipcRenderer.invoke('orca-plan:write-task-context', { workspaceRoot, itemId, content }),
+  readScreenshot: (workspaceRoot, relativePath) =>
+    ipcRenderer.invoke('orca-plan:read-screenshot', { workspaceRoot, relativePath }),
   detectGitHub: (workspaceRoot) =>
     ipcRenderer.invoke('orca-plan:detect-github', { workspaceRoot }),
   ensurePlanSchema: (workspaceRoot) =>

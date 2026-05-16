@@ -3,21 +3,9 @@ import type { PlanProjectSnapshot, PlanWorkspaceEntry } from "./types";
 import { PlanProjectScreen } from "./components/PlanProjectScreen";
 import { ProjectsHome } from "./components/ProjectsHome";
 import { emptySnapshot, loadWorkspace, nextId, saveWorkspace } from "./utils/persistence";
-import { flushPlanBackupsToWorkspaceFolders } from "./utils/folderBackupFlush";
-
-/**
- * When set to a future timestamp, backup flushes are suppressed.
- * Used to prevent overwriting disk changes that we just loaded.
- */
-let suppressFlushUntil = 0;
-export function suppressBackupFlush(ms = 2000) {
-  suppressFlushUntil = Date.now() + ms;
-}
 
 export default function App() {
   const [projects, setProjects] = useState<PlanWorkspaceEntry[]>([]);
-  const projectsRef = useRef<PlanWorkspaceEntry[]>([]);
-  projectsRef.current = projects;
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
   const [draftProjectId, setDraftProjectId] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
@@ -33,30 +21,11 @@ export default function App() {
     return () => { cancelled = true; };
   }, []);
 
+  // Save to workspace.json (central disk file) + localStorage
   useEffect(() => {
     if (!hydrated) return;
     saveWorkspace(projects, activeProjectId);
   }, [hydrated, projects, activeProjectId]);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    const id = window.setTimeout(() => {
-      if (Date.now() < suppressFlushUntil) return;
-      void flushPlanBackupsToWorkspaceFolders(projectsRef.current);
-    }, 1500);
-    return () => window.clearTimeout(id);
-  }, [hydrated, projects]);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    const onVis = () => {
-      if (document.visibilityState === "hidden" && Date.now() >= suppressFlushUntil) {
-        void flushPlanBackupsToWorkspaceFolders(projectsRef.current);
-      }
-    };
-    document.addEventListener("visibilitychange", onVis);
-    return () => document.removeEventListener("visibilitychange", onVis);
-  }, [hydrated]);
 
   const activeProject = useMemo(
     () => projects.find((p) => p.id === activeProjectId) ?? null,

@@ -12,10 +12,19 @@ export interface PlanTrack {
   minimized?: boolean;
 }
 
+export interface ItemComment {
+  id: string;
+  text: string;
+  author: "user" | "agent";
+  createdAt: string;
+}
+
 export interface ChecklistItem {
   id: string;
   label: string;
   done: boolean;
+  /** Relative path to screenshot evidence (e.g. .orca-plan/screenshots/pti-xxx/check-01.png). */
+  evidence?: string;
 }
 
 /** One tile inside a plan track. */
@@ -37,6 +46,10 @@ export interface PlanTrackItem {
   lastNoteAt?: string;
   /** ISO timestamp of last user interaction (chat opened, detail viewed). */
   lastInteractedAt?: string;
+  /** ISO timestamp of last agent activity (edit, note, checklist update). */
+  lastAgentActivityAt?: string;
+  /** Notes/comments on this item. */
+  comments?: ItemComment[];
   /** Item IDs that must complete before this item can start. */
   blockedBy?: string[];
   /** Item status. */

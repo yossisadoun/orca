@@ -29,6 +29,16 @@
   color: var(--text-primary);
 }
 
+/* --- Unread dot --- */
+
+.unreadDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #2563eb;
+  flex-shrink: 0;
+}
+
 /* --- Status icon on chips --- */
 
 .statusIcon {
@@ -90,6 +100,169 @@
 .waveSliderLabel {
   font-size: 11px;
   font-weight: 600;
+  color: var(--text-muted);
+}
+
+/* --- View toggle --- */
+
+.viewToggleGroup {
+  display: flex;
+  gap: 2px;
+  background: var(--bg-subtle, #f1f1f3);
+  border-radius: 7px;
+  padding: 2px;
+}
+
+.viewToggleBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.viewToggleBtn:hover {
+  background: var(--bg-hover, rgba(0, 0, 0, 0.06));
+  color: var(--text-primary);
+}
+
+.viewToggleBtnActive {
+  color: var(--accent-text, #5b21b6);
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* --- Inbox view --- */
+
+.inboxView {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.inboxSection {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.inboxSectionTitle {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.inboxCount {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.inboxEmpty {
+  margin: 0;
+  padding: 24px 0;
+  text-align: center;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.inboxItems {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* --- Status board view --- */
+
+.statusBoard {
+  display: flex;
+  gap: 12px;
+  min-height: 100px;
+}
+
+.statusColumn {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.statusColumnDropTarget .statusColumnHeader {
+  border-bottom-color: var(--accent-text, #5b21b6);
+}
+
+.statusColumnHeader {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--border-subtle);
+  margin-bottom: 2px;
+}
+
+.statusColumnIcon {
+  display: inline-flex;
+  align-items: center;
+}
+
+.statusColumnTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.statusColumnCount {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+.statusColumnItems {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.statusCard {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: var(--bg-app);
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.statusCard:hover {
+  border-color: var(--accent-text, #5b21b6);
+}
+
+.statusCardLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.statusCardMeta {
+  font-size: 11px;
   color: var(--text-muted);
 }
 
@@ -512,7 +685,13 @@
 .itemsScroll {
   flex: 1;
   min-width: 0;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: visible;
+  scrollbar-width: none;
+}
+
+.itemsScroll::-webkit-scrollbar {
+  display: none;
 }
 
 .itemsWrap {
@@ -694,9 +873,9 @@
 .itemChipTooltip {
   position: absolute;
   left: 50%;
-  top: calc(100% + 8px);
+  bottom: calc(100% + 8px);
   z-index: 50;
-  transform: translateX(-50%) translateY(-4px);
+  transform: translateX(-50%) translateY(4px);
   box-sizing: border-box;
   /* `width:auto` shrink-to-fits to the chip (~320px). `fit-content` follows text width; cap with max-width. */
   width: fit-content;

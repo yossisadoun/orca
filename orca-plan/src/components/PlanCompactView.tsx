@@ -1,4 +1,4 @@
-import { Check, ChevronLeft, ChevronRight, Circle, Clock, Eye, Flame, Loader, MessageCircle, Plus } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Circle, Clock, Columns3, Eye, Flame, Inbox, LayoutList, Loader, MessageCircle, Plus } from "lucide-react";
 import type { RefObject } from "react";
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { PLAN_TRACK_ITEM_MIME } from "../constants/dnd";
@@ -46,6 +46,7 @@ export function PlanCompactView({
   onUpdateDevOrder,
   onUpdateStatus,
   onOpenItemDetail,
+  unseenSessions,
   heatMapEnabled,
   onToggleHeatMap,
   versionCount,
@@ -77,6 +78,8 @@ export function PlanCompactView({
   onUpdateStatus?: (itemId: string, status: ItemStatus) => void;
   /** Open the item detail popup. */
   onOpenItemDetail?: (itemId: string) => void;
+  /** Set of session keys with unseen PTY output. */
+  unseenSessions?: Set<string>;
   /** Whether heat map coloring is enabled. */
   heatMapEnabled?: boolean;
   /** Toggle heat map on/off. */
@@ -115,6 +118,9 @@ export function PlanCompactView({
   // const maxDevOrder = Math.max(0, ...items.map((i) => i.devOrder ?? 0));
   // const hasAnyDevOrder = items.some((i) => i.devOrder != null && i.devOrder > 0);
   const devOrderFilter: number | null = null;
+
+  const [viewMode, setViewMode] = useState<"tracks" | "status" | "inbox">("tracks");
+  const [statusBoardDropTarget, setStatusBoardDropTarget] = useState<ItemStatus | null>(null);
 
   // Scroll refs and overflow detection per track
   const scrollRefsMap = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -656,6 +662,7 @@ export function PlanCompactView({
                     const itemReady = isItemReady(item, items);
                     const isWaveFiltered = waveFilter != null && itemWave != null && itemWave > waveFilter;
                     const isBlocked = !itemReady && (item.blockedBy?.length ?? 0) > 0;
+                    const hasUnread = unseenSessions?.has(item.id) ?? false;
                     const chipTitle = itemDesc
                       ? `${itemDesc} · Alt+click to edit`
                       : "Alt+click to edit label";
@@ -752,6 +759,7 @@ export function PlanCompactView({
                             </span>
                           ) : null}
                           <span className={styles.itemChipFace}>{item.label}</span>
+                          {hasUnread ? <span className={styles.unreadDot} title="Agent has new activity" /> : null}
                           {hasWaves && itemWave != null && itemWave !== Infinity ? (
                             <span className={`${styles.waveBadge} ${itemReady ? styles.waveBadgeReady : styles.waveBadgeBlocked}`}>
                               W{itemWave}
@@ -822,6 +830,32 @@ export function PlanCompactView({
       <div className={styles.planHeader}>
         <h2 className={styles.planHeading}>Master Plan</h2>
         <div className={styles.planHeaderControls}>
+          <div className={styles.viewToggleGroup}>
+            <button
+              type="button"
+              className={`${styles.viewToggleBtn} ${viewMode === "tracks" ? styles.viewToggleBtnActive : ""}`}
+              onClick={() => setViewMode("tracks")}
+              title="Group by track"
+            >
+              <LayoutList size={14} strokeWidth={2} />
+            </button>
+            <button
+              type="button"
+              className={`${styles.viewToggleBtn} ${viewMode === "status" ? styles.viewToggleBtnActive : ""}`}
+              onClick={() => setViewMode("status")}
+              title="Group by status"
+            >
+              <Columns3 size={14} strokeWidth={2} />
+            </button>
+            <button
+              type="button"
+              className={`${styles.viewToggleBtn} ${viewMode === "inbox" ? styles.viewToggleBtnActive : ""}`}
+              onClick={() => setViewMode("inbox")}
+              title="Inbox"
+            >
+              <Inbox size={14} strokeWidth={2} />
+            </button>
+          </div>
           {hasWaves ? (
             <div className={styles.waveSlider}>
               <span className={styles.waveSliderLabel}>W</span>
@@ -899,6 +933,149 @@ export function PlanCompactView({
         <div className={styles.emptyBlock}>
           {addTrackButtonEl(styles.emptyAddTrack)}
         </div>
+      ) : viewMode === "inbox" ? (
+        <>
+          <div className={styles.inboxView}>
+            {(() => {
+              const unread = items.filter((i) => unseenSessions?.has(i.id));
+              const review = items.filter((i) => !unseenSessions?.has(i.id) && i.status === "review");
+              const total = unread.length + review.length;
+              if (total === 0) {
+                return <p className={styles.inboxEmpty}>Inbox zero — nothing needs your attention.</p>;
+              }
+              return (
+                <>
+                  {unread.length > 0 ? (
+                    <div className={styles.inboxSection}>
+                      <h4 className={styles.inboxSectionTitle}>
+                        <span className={styles.unreadDot} /> Unread
+                        <span className={styles.inboxCount}>{unread.length}</span>
+                      </h4>
+                      <div className={styles.inboxItems}>
+                        {unread.map((item) => {
+                          const track = tracks.find((t) => t.id === item.trackId);
+                          return (
+                            <button key={item.id} type="button" className={styles.statusCard} onClick={() => onOpenItemDetail?.(item.id)}>
+                              <span className={styles.statusCardLabel}>
+                                <span className={`${styles.statusIcon} ${styles[`statusIcon_${item.status || "backlog"}`]}`}>
+                                  {STATUS_ICONS[item.status || "backlog"]}
+                                </span>
+                                {item.label}
+                                <span className={styles.unreadDot} />
+                              </span>
+                              <span className={styles.statusCardMeta}>
+                                {track?.title ?? ""}
+                                {item.lastNote ? ` · ${item.lastNote.slice(0, 60)}${item.lastNote.length > 60 ? "..." : ""}` : ""}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : null}
+                  {review.length > 0 ? (
+                    <div className={styles.inboxSection}>
+                      <h4 className={styles.inboxSectionTitle}>
+                        <span className={`${styles.statusIcon} ${styles.statusIcon_review}`}>{STATUS_ICONS.review}</span>
+                        Needs review
+                        <span className={styles.inboxCount}>{review.length}</span>
+                      </h4>
+                      <div className={styles.inboxItems}>
+                        {review.map((item) => {
+                          const track = tracks.find((t) => t.id === item.trackId);
+                          return (
+                            <button key={item.id} type="button" className={styles.statusCard} onClick={() => onOpenItemDetail?.(item.id)}>
+                              <span className={styles.statusCardLabel}>
+                                <span className={`${styles.statusIcon} ${styles.statusIcon_review}`}>{STATUS_ICONS.review}</span>
+                                {item.label}
+                              </span>
+                              <span className={styles.statusCardMeta}>
+                                {track?.title ?? ""}
+                                {item.lastNote ? ` · ${item.lastNote.slice(0, 60)}${item.lastNote.length > 60 ? "..." : ""}` : ""}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : null}
+                </>
+              );
+            })()}
+          </div>
+        </>
+      ) : viewMode === "status" ? (
+        <>
+          <div className={styles.statusBoard}>
+            {STATUS_ORDER.map((status) => {
+              const statusItems = items.filter((i) => (i.status || "backlog") === status);
+              const isWaveFilteredItem = (item: PlanTrackItem) =>
+                waveFilter != null && (waveMap.get(item.id) ?? 0) > waveFilter;
+              return (
+                <div
+                  key={status}
+                  className={`${styles.statusColumn} ${statusBoardDropTarget === status ? styles.statusColumnDropTarget : ""}`}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = "move";
+                    setStatusBoardDropTarget(status);
+                  }}
+                  onDragLeave={(e) => {
+                    if (!(e.currentTarget as Element).contains(e.relatedTarget as Node)) {
+                      setStatusBoardDropTarget(null);
+                    }
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setStatusBoardDropTarget(null);
+                    const itemId = e.dataTransfer.getData("text/plain");
+                    if (itemId && onUpdateStatus) {
+                      onUpdateStatus(itemId, status);
+                    }
+                  }}
+                >
+                  <div className={styles.statusColumnHeader}>
+                    <span className={`${styles.statusColumnIcon} ${styles[`statusIcon_${status}`]}`}>
+                      {STATUS_ICONS[status]}
+                    </span>
+                    <span className={styles.statusColumnTitle}>{STATUS_LABELS[status]}</span>
+                    <span className={styles.statusColumnCount}>{statusItems.length}</span>
+                  </div>
+                  <div className={styles.statusColumnItems}>
+                    {statusItems.map((item) => {
+                      const track = tracks.find((t) => t.id === item.trackId);
+                      const itemWave = waveMap.get(item.id);
+                      const filtered = isWaveFilteredItem(item);
+                      const cardUnread = unseenSessions?.has(item.id) ?? false;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          draggable
+                          className={`${styles.statusCard} ${filtered ? styles.itemChipDimmed : ""}`}
+                          onClick={() => onOpenItemDetail?.(item.id)}
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData("text/plain", item.id);
+                            e.dataTransfer.effectAllowed = "move";
+                          }}
+                        >
+                          <span className={styles.statusCardLabel}>
+                            {item.label}
+                            {cardUnread ? <span className={styles.unreadDot} title="Agent has new activity" /> : null}
+                          </span>
+                          <span className={styles.statusCardMeta}>
+                            {track ? track.title : ""}
+                            {hasWaves && itemWave != null && itemWave !== Infinity ? ` · W${itemWave}` : ""}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
       ) : (
         <>
           <ul className={styles.list} aria-label="Plan tracks and items">

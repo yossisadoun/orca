@@ -103,6 +103,8 @@ function stopWorkspaceFsWatcher() {
  */
 const ptySessions = new Map();
 const PTY_BUFFER_MAX = 50000; // chars
+// Track last seen buffer length per session for unread detection
+const lastSeenBufferLength = new Map(); // sessionKey → number
 
 function ptySessionKey(wcId, sessionKey) {
   return `${wcId}:${sessionKey}`;
@@ -320,6 +322,8 @@ function registerIpcHandlers() {
     'orca-plan:pty-resize',
     'orca-plan:pty-kill',
     'orca-plan:pty-connect',
+    'orca-plan:pty-mark-seen',
+    'orca-plan:pty-unseen-sessions',
     'orca-plan:pty-list',
     'orca-plan:host-ping',
     'orca-plan:pick-import-plan-backups',
@@ -327,6 +331,7 @@ function registerIpcHandlers() {
     'orca-plan:save-workspace-to-disk',
     'orca-plan:detect-claude-session',
     'orca-plan:write-task-context',
+    'orca-plan:read-screenshot',
     'orca-plan:detect-github',
     'orca-plan:ensure-plan-schema',
     'orca-plan:read-doc',
@@ -436,6 +441,26 @@ The parallel plan (tracks and items) lives in the Orca Plan app and in \`.orca-p
     }
   });
 
+  ipcMain.handle('orca-plan:read-screenshot', async (_event, args) => {
+    try {
+      const workspaceRoot = expandWorkspacePath(typeof args?.workspaceRoot === 'string' ? args.workspaceRoot : '');
+      const relativePath = typeof args?.relativePath === 'string' ? args.relativePath : '';
+      if (!workspaceRoot || !relativePath) return { ok: false, error: 'Invalid args' };
+      if (relativePath.includes('..')) return { ok: false, error: 'Path traversal' };
+      const root = path.resolve(workspaceRoot);
+      const file = path.join(root, relativePath);
+      // Verify it's under the workspace
+      if (!file.startsWith(root)) return { ok: false, error: 'Outside workspace' };
+      const data = await fs.readFile(file);
+      const ext = path.extname(file).toLowerCase();
+      const mime = ext === '.png' ? 'image/png' : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : ext === '.gif' ? 'image/gif' : 'image/png';
+      return { ok: true, dataUrl: `data:${mime};base64,${data.toString('base64')}` };
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      return { ok: false, error: message };
+    }
+  });
+
   ipcMain.handle('orca-plan:detect-github', async (_event, args) => {
     try {
       const workspaceRoot = expandWorkspacePath(typeof args?.workspaceRoot === 'string' ? args.workspaceRoot : '');
@@ -535,13 +560,15 @@ This file describes the structure of \`.orca-plan/plan.json\`. Read this before 
       "claudeSessionId": "uuid",           // optional, set by Orca — do not modify
       "lastNote": "Brief status note",     // optional, where work was left off
       "lastNoteAt": "ISO timestamp",       // optional, when lastNote was set
+      "lastAgentActivityAt": "ISO timestamp", // optional, set when agent makes changes
       "blockedBy": ["pti-other-item-id"],  // optional, item IDs that must complete first
       "status": "backlog",                 // optional: "backlog" | "in_progress" | "review" | "done"
       "checklist": [                       // optional, sub-task checklist
         {
           "id": "cl-<timestamp>-<random>",
           "label": "Sub-task description",
-          "done": false                    // true when completed
+          "done": false,                   // true when completed
+          "evidence": ".orca-plan/screenshots/pti-xxx/check-01.png"  // optional, screenshot path
         }
       ]
     }
@@ -569,7 +596,7 @@ This file describes the structure of \`.orca-plan/plan.json\`. Read this before 
 - **lastNote** is a brief summary of where work was left off. Update it when reaching a stopping point or switching tasks. Include \`lastNoteAt\` as an ISO timestamp.
 - **status** tracks item progress: \`backlog\` (default), \`in_progress\`, \`review\`, \`done\`. Update it as work progresses.
 - **blockedBy** lists item IDs that must complete before this item can start. Use it to express real dependencies. The UI computes parallel "waves" from this — wave 1 items have no blockers and can start immediately. Maximize parallelism by only adding dependencies that are truly required.
-- **checklist** is a sub-task breakdown for an item. Add it when planning the implementation of an item. Set \`done: true\` as sub-tasks are completed.
+- **checklist** is a sub-task breakdown for an item. Add it when planning the implementation of an item. Set \`done: true\` as sub-tasks are completed. Set \`evidence\` to a screenshot path when you have visual proof (e.g. \`.orca-plan/screenshots/pti-xxx/check-01.png\`).
 - **releaseLog** tracks what changed for release notes. Add entries when completing work — use a user-facing label, not internal jargon. Link to a planItemId when applicable. Ad-hoc entries (bug fixes, quick wins) don't need a plan item link.
 - After editing, save the file. Orca watches for changes and reloads automatically.
 
@@ -613,7 +640,9 @@ This file describes the structure of \`.orca-plan/plan.json\`. Read this before 
 
       // Merge agent-owned fields from existing file before writing,
       // so we never clobber data the agent wrote (checklist, lastNote, etc.)
-      const agentFields = ['checklist', 'lastNote', 'lastNoteAt', 'claudeSessionId', 'blockedBy', 'status'];
+      // Note: 'status' is NOT in this list — user status changes must not be reverted by the merge.
+      // Agent status changes are picked up by the file watcher instead.
+      const agentFields = ['checklist', 'lastNote', 'lastNoteAt', 'claudeSessionId', 'blockedBy', 'lastAgentActivityAt'];
       try {
         const existing = await fs.readFile(file, 'utf8');
         const diskData = JSON.parse(existing);
@@ -627,12 +656,9 @@ This file describes the structure of \`.orca-plan/plan.json\`. Read this before 
             const diskItem = diskById.get(item.id);
             if (!diskItem) continue;
             for (const field of agentFields) {
+              // Always prefer disk version for agent-owned fields
               if (diskItem[field] !== undefined && diskItem[field] !== null) {
-                // Preserve agent field from disk if Orca's version doesn't have it
-                // OR if Orca's version is older/empty
-                if (item[field] === undefined || item[field] === null) {
-                  item[field] = diskItem[field];
-                }
+                item[field] = diskItem[field];
               }
             }
           }
@@ -1174,7 +1200,37 @@ This file describes the structure of \`.orca-plan/plan.json\`. Read this before 
     const key = ptySessionKey(wcId, sessionKey);
     const session = ptySessions.get(key);
     if (!session) return { ok: false, exists: false };
+    // Record current buffer length as "seen"
+    lastSeenBufferLength.set(sessionKey, session.buffer.length);
     return { ok: true, exists: true, buffer: Buffer.from(session.buffer).toString('base64') };
+  });
+
+  ipcMain.handle('orca-plan:pty-mark-seen', (event, args) => {
+    const sessionKey = typeof args?.sessionKey === 'string' ? args.sessionKey.trim() : '';
+    if (sessionKey) {
+      const key = ptySessionKey(event.sender.id, sessionKey);
+      const session = ptySessions.get(key);
+      if (session) {
+        lastSeenBufferLength.set(sessionKey, session.buffer.length);
+      }
+    }
+    return { ok: true };
+  });
+
+  ipcMain.handle('orca-plan:pty-unseen-sessions', (event) => {
+    const UNSEEN_THRESHOLD = 100; // bytes of new output to count as "new activity"
+    const wcId = event.sender.id;
+    const prefix = `${wcId}:`;
+    const unseen = [];
+    for (const [key, session] of ptySessions) {
+      if (!key.startsWith(prefix)) continue;
+      const sessionKey = key.slice(prefix.length);
+      const lastSeen = lastSeenBufferLength.get(sessionKey) ?? 0;
+      if (session.buffer.length - lastSeen > UNSEEN_THRESHOLD) {
+        unseen.push(sessionKey);
+      }
+    }
+    return { ok: true, sessions: unseen };
   });
 
   ipcMain.handle('orca-plan:pty-list', (event) => {

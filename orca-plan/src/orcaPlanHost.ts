@@ -32,6 +32,8 @@ export type OrcaPlanHostAPI = {
   onWorkspaceFsChanged: (callback: (payload: { workspaceRoot: string }) => void) => () => void;
   ptySpawn: (opts: { workspaceRoot: string; cols: number; rows: number; sessionKey: string; resumeSessionId?: string; systemPrompt?: string }) => Promise<unknown>;
   ptyConnect: (sessionKey: string) => Promise<unknown>;
+  ptyMarkSeen: (sessionKey: string) => Promise<unknown>;
+  ptyUnseenSessions: () => Promise<unknown>;
   ptyList: () => Promise<unknown>;
   ptyWrite: (sessionKey: string, data: string) => Promise<unknown>;
   ptyResize: (sessionKey: string, cols: number, rows: number) => Promise<unknown>;
@@ -45,6 +47,7 @@ export type OrcaPlanHostAPI = {
   saveWorkspaceToDisk?: (projects: PlanWorkspaceEntry[], lastActiveProjectId: string | null) => Promise<unknown>;
   detectClaudeSession?: (workspaceRoot: string) => Promise<unknown>;
   writeTaskContext?: (workspaceRoot: string, itemId: string, content: string) => Promise<unknown>;
+  readScreenshot?: (workspaceRoot: string, relativePath: string) => Promise<unknown>;
   detectGitHub?: (workspaceRoot: string) => Promise<unknown>;
   ensurePlanSchema?: (workspaceRoot: string) => Promise<unknown>;
   listDocs?: (workspaceRoot: string) => Promise<unknown>;

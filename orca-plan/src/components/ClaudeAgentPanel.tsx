@@ -329,7 +329,13 @@ IMPORTANT:
 - The full project plan is at .orca-plan/plan.json (read .orca-plan/plan-schema.md for the schema)
 - You can edit plan.json to update this item's status, description, or devOrder
 - When you finish work on this item, set its status to "review" (never "done" — only the user marks items done)
-- When reaching a stopping point, update this item's \`lastNote\` and \`lastNoteAt\` in plan.json with a brief summary of where we left off
+- When reaching a stopping point, update this item's \`lastNote\`, \`lastNoteAt\`, and \`lastAgentActivityAt\` (ISO timestamp) in plan.json
+- QA: before setting status to "review", run the app and take screenshots/recordings with Playwright to verify your work visually:
+  1. Save screenshots to \`.orca-plan/screenshots/${activeItem.id}/\`
+  2. Read each screenshot to visually verify it looks correct
+  3. Set \`evidence\` on checklist items to the screenshot/video path (e.g. \`.orca-plan/screenshots/${activeItem.id}/todo-list.png\` or \`.webm\` for recordings)
+     For video: use \`recordVideo: { dir: '.orca-plan/screenshots/${activeItem.id}/' }\` in Playwright context
+  4. Only set "review" after you've verified the screenshots look right
 - Project docs are at .orca-plan/docs/vision.md and .orca-plan/docs/architecture.md${github ? `
 - GitHub repo: ${github.owner}/${github.repo} (default branch: ${github.defaultBranch})` : ""}`;
         } else {
